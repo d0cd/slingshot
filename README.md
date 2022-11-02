@@ -1,6 +1,6 @@
 <h1 align="center">slingshot</h1>
 
-`slingshot` is a lightweight CLI for deploying programs and executing transactions on Aleo.
+A lightweight CLI for deploying programs and executing transactions on Aleo.
 
 ## Table of Contents
 
