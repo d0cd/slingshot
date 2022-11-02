@@ -19,12 +19,12 @@ use crate::helpers::Updater;
 use anyhow::Result;
 use clap::Parser;
 
-/// Update Aleo.
+/// Update slingshot.
 #[derive(Debug, Parser)]
 pub enum Update {
-    /// Update Aleo to the latest version
+    /// Update slingshot to the latest version
     Update {
-        /// Lists all available versions of Aleo
+        /// Lists all available versions of slingshot
         #[clap(short = 'l', long)]
         list: bool,
         /// Suppress outputs to terminal
@@ -39,7 +39,7 @@ impl Update {
             Self::Update { list, quiet } => match list {
                 true => match Updater::show_available_releases() {
                     Ok(output) => Ok(output),
-                    Err(error) => Ok(format!("Failed to list the available versions of Aleo\n{}\n", error)),
+                    Err(error) => Ok(format!("Failed to list the available versions of slingshot\n{error}\n")),
                 },
                 false => {
                     let result = Updater::update_to_latest_release(!quiet);
@@ -47,14 +47,14 @@ impl Update {
                         match result {
                             Ok(status) => {
                                 if status.uptodate() {
-                                    Ok("\nAleo is already on the latest version".to_string())
+                                    Ok("\nslingshot is already on the latest version".to_string())
                                 } else if status.updated() {
-                                    Ok(format!("\nAleo has updated to version {}", status.version()))
+                                    Ok(format!("\nslingshot has updated to version {}", status.version()))
                                 } else {
                                     Ok(String::new())
                                 }
                             }
-                            Err(e) => Ok(format!("\nFailed to update Aleo to the latest version\n{}\n", e)),
+                            Err(e) => Ok(format!("\nFailed to update slingshot to the latest version\n{e}\n")),
                         }
                     } else {
                         Ok(String::new())

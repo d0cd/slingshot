@@ -1,27 +1,20 @@
 [package]
-name = "aleo"
-version = "0.2.0"
+name = "slingshot"
+version = "0.1.0"
 authors = ["The Aleo Team <hello@aleo.org>"]
-description = "Aleo"
-homepage = "https://aleo.org"
-repository = "https://github.com/AleoHQ/aleo"
-keywords = ["aleo", "cryptography", "blockchain", "decentralized", "zero-knowledge"]
+description = "A lightweight CLI for deploying programs and executing transactions on Aleo."
+repository = "https://github.com/d0cd/slingshot.git"
+keywords = ["slingshot", "aleo", "cryptography", "blockchain", "decentralized", "zero-knowledge"]
 categories = ["cryptography::cryptocurrencies", "operating-systems"]
 include = ["Cargo.toml", "src", "README.md", "LICENSE.md"]
 license = "GPL-3.0"
-edition = "2018"
-
-[workspace]
-members = [
-    "rust/account",
-    "wasm"
-]
+edition = "2021"
 
 [lib]
 path = "cli/lib.rs"
 
 [[bin]]
-name = "aleo"
+name = "slingshot"
 path = "cli/main.rs"
 
 [dependencies.anyhow]

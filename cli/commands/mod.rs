@@ -14,20 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo library. If not, see <https://www.gnu.org/licenses/>.
 
-mod account;
-pub use account::*;
-
-mod build;
-pub use build::*;
-
-mod clean;
-pub use clean::*;
-
 mod deploy;
 pub use deploy::*;
-
-mod new;
-pub use new::*;
 
 mod node;
 pub use node::*;
@@ -42,7 +30,7 @@ use anyhow::Result;
 use clap::Parser;
 
 #[derive(Debug, Parser)]
-#[clap(name = "aleo", author = "The Aleo Team <hello@aleo.org>", setting = clap::AppSettings::ColoredHelp)]
+#[clap(name = "slingshot", author = "The Aleo Team <hello@aleo.org>", setting = clap::AppSettings::ColoredHelp)]
 pub struct CLI {
     /// Specify the verbosity [options: 0, 1, 2, 3]
     #[clap(default_value = "2", short, long)]
@@ -54,16 +42,8 @@ pub struct CLI {
 
 #[derive(Debug, Parser)]
 pub enum Command {
-    #[clap(subcommand)]
-    Account(Account),
-    #[clap(name = "build")]
-    Build(Build),
-    #[clap(name = "clean")]
-    Clean(Clean),
     #[clap(name = "deploy")]
     Deploy(Deploy),
-    #[clap(name = "new")]
-    New(New),
     #[clap(subcommand)]
     Node(Node),
     #[clap(name = "run")]
@@ -76,11 +56,7 @@ impl Command {
     /// Parses the command.
     pub fn parse(self) -> Result<String> {
         match self {
-            Self::Account(command) => command.parse(),
-            Self::Build(command) => command.parse(),
-            Self::Clean(command) => command.parse(),
             Self::Deploy(command) => command.parse(),
-            Self::New(command) => command.parse(),
             Self::Node(command) => command.parse(),
             Self::Run(command) => command.parse(),
             Self::Update(command) => command.parse(),
