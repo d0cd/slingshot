@@ -15,108 +15,61 @@
 // along with the Aleo library. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{helpers::Ledger, Network};
-use snarkvm::{
-    file::{AleoFile, Manifest},
-    package::Package,
-};
+use snarkvm::file::Manifest;
+use std::{path::PathBuf, str::FromStr};
 
-use anyhow::{ensure, Result};
+use anyhow::{bail, ensure, Result};
 use clap::Parser;
 use colored::*;
+use snarkvm::prelude::PrivateKey;
 use std::sync::Arc;
 
 /// Commands to operate a local development node.
 #[derive(Debug, Parser)]
 pub enum Node {
-    /// Starts a local development node
+    /// Starts a local development node.
     Start {
-        /// Skips deploying the local program at genesis.
-        #[clap(long)]
-        nodeploy: bool,
+        /// A private key.
+        #[clap(short, long, conflicts_with = "manifest_file")]
+        key: Option<String>,
+        /// A path to a directory containing a manifest file.
+        #[clap(short, long, conflicts_with = "private_key")]
+        path: Option<String>,
     },
 }
 
 impl Node {
     pub fn parse(self) -> Result<String> {
         match self {
-            Self::Start { nodeploy } => {
-                // Derive the program directory path.
-                let directory = std::env::current_dir()?;
+            Self::Start { key, path } => {
+                let private_key = match (key, path) {
+                    (Some(_), Some(_)) => unreachable!("clap prevents conflicting options from being enabled"),
+                    (None, None) => bail!("Please specify either a private key or a manifest file"),
+                    (Some(key), None) => PrivateKey::<Network>::from_str(&key)?,
+                    (None, Some(path)) => {
+                        // Instantiate a path to the directory containing the manifest file.
+                        let directory = PathBuf::from_str(&path)?;
+                        // Ensure the directory path exists.
+                        ensure!(directory.exists(), "The program directory does not exist: {}", directory.display());
+                        // Ensure the manifest file exists.
+                        ensure!(
+                            Manifest::<Network>::exists_at(&directory),
+                            "Please start a local node in an Aleo program directory (missing '{}' at '{}')",
+                            Manifest::<Network>::file_name(),
+                            directory.display()
+                        );
 
-                // Ensure the directory path exists.
-                ensure!(directory.exists(), "The program directory does not exist: {}", directory.display());
-                // Ensure the manifest file exists.
-                ensure!(
-                    Manifest::<Network>::exists_at(&directory),
-                    "Please start a local node in an Aleo program directory (missing '{}' at '{}')",
-                    Manifest::<Network>::file_name(),
-                    directory.display()
-                );
+                        // Open the manifest file.
+                        let manifest = Manifest::open(&directory)?;
 
-                // Open the manifest file.
-                let manifest = Manifest::open(&directory)?;
+                        *manifest.development_private_key()
+                    }
+                };
 
-                println!(
-                    "⏳ Starting a local development node for '{}' (in-memory)...\n",
-                    manifest.program_id().to_string().bold()
-                );
-
-                // Retrieve the private key.
-                let private_key = manifest.development_private_key();
+                println!("⏳ Starting a local development node (in-memory)...\n",);
 
                 // Initialize the ledger.
-                let ledger = Arc::new(Ledger::<Network>::load(private_key)?);
-
-                // Deploy the local program.
-                if !nodeploy {
-                    // Load the package.
-                    let package = Package::open(&directory)?;
-                    // Load the program.
-                    let program = package.program();
-
-                    // Prepare the imports directory.
-                    let imports_directory = package.imports_directory();
-
-                    // Load all of the imported programs (in order of imports).
-                    let programs = program
-                        .imports()
-                        .keys()
-                        .map(|program_id| {
-                            // Open the Aleo imported program file.
-                            let import_program_file = AleoFile::open(&imports_directory, program_id, false)?;
-                            // Return the imported program.
-                            Ok(import_program_file.program().clone())
-                        })
-                        .collect::<Result<Vec<_>>>()?;
-
-                    // Deploy the imported programs (in order of imports), and the main program.
-                    for program in programs.iter().chain([program.clone()].iter()) {
-                        println!(
-                            "📦 Deploying '{}' to the local development node...\n",
-                            program.id().to_string().bold()
-                        );
-
-                        // Create a deployment transaction.
-                        let transaction = ledger.create_deploy(program, 1)?;
-                        // Add the transaction to the memory pool.
-                        ledger.add_to_memory_pool(transaction.clone())?;
-
-                        // Advance to the next block.
-                        let next_block = ledger.advance_to_next_block()?;
-                        println!(
-                            "\n🛡️  Produced block {} ({})\n\n{}\n",
-                            next_block.height(),
-                            next_block.hash(),
-                            serde_json::to_string_pretty(&next_block.header())?.dimmed()
-                        );
-
-                        println!(
-                            "✅ Deployed '{}' in transaction '{}'\n",
-                            program.id().to_string().bold(),
-                            transaction.id()
-                        );
-                    }
-                }
+                let ledger = Arc::new(Ledger::<Network>::load(&private_key)?);
 
                 loop {
                     // Create a transfer transaction.
