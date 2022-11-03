@@ -25,15 +25,15 @@ pub struct Updater;
 
 // TODO Add logic for users to easily select release versions.
 impl Updater {
-    const ALEO_BIN_NAME: &'static str = "aleo";
-    const ALEO_REPO_NAME: &'static str = "aleo";
-    const ALEO_REPO_OWNER: &'static str = "AleoHQ";
+    const SLINGSHOT_BIN_NAME: &'static str = "slingshot";
+    const SLINGSHOT_REPO_NAME: &'static str = "slingshot";
+    const SLINGSHOT_REPO_OWNER: &'static str = "AleoHQ";
 
-    /// Show all available releases for `aleo`.
+    /// Show all available releases for `slingshot`.
     pub fn show_available_releases() -> Result<String> {
         let releases = github::ReleaseList::configure()
-            .repo_owner(Self::ALEO_REPO_OWNER)
-            .repo_name(Self::ALEO_REPO_NAME)
+            .repo_owner(Self::SLINGSHOT_REPO_OWNER)
+            .repo_name(Self::SLINGSHOT_REPO_NAME)
             .build()?
             .fetch()?;
 
@@ -44,12 +44,12 @@ impl Updater {
         Ok(output)
     }
 
-    /// Update `aleo` to the latest release.
+    /// Update `slingshot` to the latest release.
     pub fn update_to_latest_release(show_output: bool) -> Result<Status, UpdaterError> {
         let status = github::Update::configure()
-            .repo_owner(Self::ALEO_REPO_OWNER)
-            .repo_name(Self::ALEO_REPO_NAME)
-            .bin_name(Self::ALEO_BIN_NAME)
+            .repo_owner(Self::SLINGSHOT_REPO_OWNER)
+            .repo_name(Self::SLINGSHOT_REPO_NAME)
+            .bin_name(Self::SLINGSHOT_BIN_NAME)
             .current_version(env!("CARGO_PKG_VERSION"))
             .show_download_progress(show_output)
             .no_confirm(true)
@@ -60,12 +60,12 @@ impl Updater {
         Ok(status)
     }
 
-    /// Check if there is an available update for `aleo` and return the newest release.
+    /// Check if there is an available update for `slingshot` and return the newest release.
     pub fn update_available() -> Result<String, UpdaterError> {
         let updater = github::Update::configure()
-            .repo_owner(Self::ALEO_REPO_OWNER)
-            .repo_name(Self::ALEO_REPO_NAME)
-            .bin_name(Self::ALEO_BIN_NAME)
+            .repo_owner(Self::SLINGSHOT_REPO_OWNER)
+            .repo_name(Self::SLINGSHOT_REPO_NAME)
+            .bin_name(Self::SLINGSHOT_BIN_NAME)
             .current_version(env!("CARGO_PKG_VERSION"))
             .build()?;
 
@@ -83,7 +83,7 @@ impl Updater {
     pub fn print_cli() -> String {
         if let Ok(latest_version) = Self::update_available() {
             let mut output = "🟢 A new version is available! Run".bold().green().to_string();
-            output += &" `aleo update` ".bold().white();
+            output += &" `slingshot update` ".bold().white();
             output += &format!("to update to v{latest_version}.").bold().green();
             output
         } else {
