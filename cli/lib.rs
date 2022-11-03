@@ -22,6 +22,8 @@ extern crate thiserror;
 pub mod commands;
 pub mod errors;
 pub mod helpers;
+pub mod ledger;
+pub mod messages;
 
 pub(crate) type Network = snarkvm::prelude::Testnet3;
 pub(crate) type Aleo = snarkvm::circuit::AleoV0;

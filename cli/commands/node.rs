@@ -14,15 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo library. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{helpers::Ledger, Network};
+use crate::{ledger::Ledger, Network};
+
 use snarkvm::file::Manifest;
-use std::{path::PathBuf, str::FromStr};
 
 use anyhow::{bail, ensure, Result};
 use clap::Parser;
 use colored::*;
 use snarkvm::prelude::PrivateKey;
-use std::sync::Arc;
+use std::{path::PathBuf, str::FromStr, sync::Arc};
 
 /// Commands to operate a local development node.
 #[derive(Debug, Parser)]
@@ -54,7 +54,7 @@ impl Node {
                         // Ensure the manifest file exists.
                         ensure!(
                             Manifest::<Network>::exists_at(&directory),
-                            "Please start a local node in an Aleo program directory (missing '{}' at '{}')",
+                            "Please ensure that the manifest file exists in the Aleo program directory (missing '{}' at '{}')",
                             Manifest::<Network>::file_name(),
                             directory.display()
                         );

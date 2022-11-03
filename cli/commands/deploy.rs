@@ -17,13 +17,22 @@
 use crate::{Aleo, Network};
 use snarkvm::package::Package;
 
-use anyhow::Result;
+use anyhow::{ensure, Result};
 use clap::Parser;
 use colored::Colorize;
+use snarkvm::{
+    file::{AleoFile, Manifest},
+    prelude::Transaction,
+};
 
 /// Deploys an Aleo program.
 #[derive(Debug, Parser)]
-pub struct Deploy;
+pub struct Deploy {
+    /// The endpoint to deploy to. Defaults to a local development node at "http://localhost:4180/testnet3/transaction/broadcast".
+    #[clap(short, long, default_value = "http://localhost:4180/testnet3/transaction/broadcast")]
+    pub endpoint: String,
+    // TODO: Optional path
+}
 
 impl Deploy {
     /// Deploys an Aleo program with the specified name.
@@ -34,8 +43,12 @@ impl Deploy {
         // Load the package.
         let package = Package::<Network>::open(&path)?;
 
-        // Deploy the package.
-        package.deploy::<Aleo>(Some("https://www.aleo.network/testnet3/deploy".to_string()))?;
+        // Construct a new deployment.
+        let deployment = package.deploy::<Aleo>(None)?;
+
+        // Form a transaction from the deployment.
+        let transaction = Transaction::from_deployment(deployment)?;
+
         println!();
 
         // Prepare the path string.

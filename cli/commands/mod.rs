@@ -20,6 +20,9 @@ pub use deploy::*;
 mod node;
 pub use node::*;
 
+mod pour;
+pub use pour::*;
+
 mod run;
 pub use run::*;
 
@@ -46,6 +49,8 @@ pub enum Command {
     Deploy(Deploy),
     #[clap(subcommand)]
     Node(Node),
+    #[clap(name = "pour")]
+    Pour(Pour),
     #[clap(name = "run")]
     Run(Run),
     #[clap(subcommand)]
@@ -58,6 +63,7 @@ impl Command {
         match self {
             Self::Deploy(command) => command.parse(),
             Self::Node(command) => command.parse(),
+            Self::Pour(command) => command.parse(),
             Self::Run(command) => command.parse(),
             Self::Update(command) => command.parse(),
         }

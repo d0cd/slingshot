@@ -14,5 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo library. If not, see <https://www.gnu.org/licenses/>.
 
-pub mod updater;
-pub use updater::*;
+use snarkvm::prelude::{Network, ProgramID, Value};
+
+pub struct ExecuteRequest<N: Network> {
+    program_id: ProgramID<N>,
+}
+
+pub struct ExecuteResponse<N: Network> {
+    result: Value<N>,
+}
