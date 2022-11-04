@@ -15,8 +15,8 @@
 // along with the Aleo library. If not, see <https://www.gnu.org/licenses/>.
 
 use snarkvm::{
-    compiler::{Deployment, Program},
-    prelude::{Address, Network, PrivateKey},
+    compiler::Program,
+    prelude::{Network, PrivateKey},
 };
 
 use anyhow::Result;

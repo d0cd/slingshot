@@ -14,22 +14,30 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo library. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::messages::{PourRequest, PourResponse};
-
-use snarkvm::prelude::{Address, Network, ProgramID, Value};
+use snarkvm::prelude::{Identifier, Network, PrivateKey, ProgramID, Value};
 
 use anyhow::Result;
 use serde::{de, ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use warp::{reply::Response, Reply};
 
 pub struct ExecuteRequest<N: Network> {
+    private_key: PrivateKey<N>,
     program_id: ProgramID<N>,
+    function_name: Identifier<N>,
+    inputs: Vec<Value<N>>,
+    additional_fee: u64,
 }
 
 impl<N: Network> ExecuteRequest<N> {
     /// Initializes a new instance of a execute request.
-    pub fn new(program_id: ProgramID<N>) -> Self {
-        Self { program_id }
+    pub fn new(
+        private_key: PrivateKey<N>,
+        program_id: ProgramID<N>,
+        function_name: Identifier<N>,
+        inputs: Vec<Value<N>>,
+        additional_fee: u64,
+    ) -> Self {
+        Self { private_key, program_id, function_name, inputs, additional_fee }
     }
 
     /// Sends the request to the given endpoint.
@@ -37,18 +45,46 @@ impl<N: Network> ExecuteRequest<N> {
         Ok(ureq::post(endpoint).send_json(self)?.into_json()?)
     }
 
+    /// Returns the private_key.
+    pub const fn private_key(&self) -> &PrivateKey<N> {
+        &self.private_key
+    }
+
     /// Returns the program_id.
     pub const fn program_id(&self) -> &ProgramID<N> {
         &self.program_id
+    }
+
+    /// Returns the function_name.
+    pub const fn function_name(&self) -> &Identifier<N> {
+        &self.function_name
+    }
+
+    /// Returns the inputs.
+    pub fn inputs(&self) -> &[Value<N>] {
+        &self.inputs
+    }
+
+    /// Returns the additional_fee.
+    pub const fn additional_fee(&self) -> u64 {
+        self.additional_fee
     }
 }
 
 impl<N: Network> Serialize for ExecuteRequest<N> {
     /// Serializes the execute request into string or bytes.
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut request = serializer.serialize_struct("ExecuteRequest", 2)?;
+        let mut request = serializer.serialize_struct("ExecuteRequest", 5)?;
+        // Serialize the private key.
+        request.serialize_field("private_key", &self.private_key.to_string())?;
         // Serialize the program_id.
         request.serialize_field("program_id", &self.program_id)?;
+        // Serialize the function_name.
+        request.serialize_field("function_name", &self.function_name)?;
+        // Serialize the inputs.
+        request.serialize_field("inputs", &self.inputs)?;
+        // Serialize the additional_fee.
+        request.serialize_field("additional_fee", &self.additional_fee)?;
         request.end()
     }
 }
@@ -60,8 +96,16 @@ impl<'de, N: Network> Deserialize<'de> for ExecuteRequest<N> {
         let mut request = serde_json::Value::deserialize(deserializer)?;
         // Recover the leaf.
         Ok(Self::new(
+            // Retrieve the private key.
+            serde_json::from_value(request["private_key"].take()).map_err(de::Error::custom)?,
             // Retrieve the program_id.
             serde_json::from_value(request["program_id"].take()).map_err(de::Error::custom)?,
+            // Retrieve the function_name.
+            serde_json::from_value(request["function_name"].take()).map_err(de::Error::custom)?,
+            // Retrieve the inputs.
+            serde_json::from_value(request["inputs"].take()).map_err(de::Error::custom)?,
+            // Retrieve the additional_fee.
+            serde_json::from_value(request["additional_fee"].take()).map_err(de::Error::custom)?,
         ))
     }
 }
