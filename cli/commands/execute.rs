@@ -14,23 +14,33 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo library. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{messages::DeployRequest, Network};
-
+use crate::{Aleo, Network};
 use snarkvm::{
-    file::{AleoFile, Manifest},
     package::Package,
+    prelude::{Identifier, Locator, Value},
 };
 
-use anyhow::{bail, ensure, Result};
+use crate::messages::ExecuteRequest;
+use anyhow::{ensure, Result};
 use clap::Parser;
 use colored::Colorize;
-use std::{path::PathBuf, str::FromStr};
+use core::str::FromStr;
+use snarkvm::{file::Manifest, prelude::ProgramID};
+use std::path::PathBuf;
 
-// TODO: Prettify
-
-/// Deploys an Aleo program.
+/// Executes an Aleo program function on a development node.
 #[derive(Debug, Parser)]
-pub struct Deploy {
+pub struct Execute {
+    /// The program identifier.
+    #[clap(parse(try_from_str))]
+    program: ProgramID<Network>,
+    /// The function name.
+    #[clap(parse(try_from_str))]
+    function: Identifier<Network>,
+    /// The function inputs.
+    #[clap(parse(try_from_str))]
+    inputs: Vec<Value<Network>>,
+
     /// The additional fee.
     #[clap(short, long)]
     pub fee: Option<u64>,
@@ -42,11 +52,12 @@ pub struct Deploy {
     pub path: Option<String>,
 }
 
-impl Deploy {
-    /// Deploys an Aleo program with the specified name.
+impl Execute {
+    /// Executes an Aleo program function with the provided inputs.
+    #[allow(clippy::format_in_format_args)]
     pub fn parse(self) -> Result<String> {
         // Setup the endpoint.
-        let endpoint = self.endpoint.unwrap_or_else(|| "http://localhost:4180/testnet3/program/deploy".to_string());
+        let endpoint = self.endpoint.unwrap_or_else(|| "http://localhost:4180/testnet3/program/execute".to_string());
 
         // Instantiate a path to the directory containing the manifest file.
         let directory = match self.path {
@@ -70,43 +81,31 @@ impl Deploy {
         // Retrieve the private key.
         let private_key = manifest.development_private_key();
 
-        // Load the package.
-        let package = Package::open(&directory)?;
+        // Create the execute request.
+        let request =
+            ExecuteRequest::new(*private_key, self.program, self.function, self.inputs, self.fee.unwrap_or(0));
 
-        // Load the program.
-        let program = package.program();
+        // TODO: Log outputs
+        // Log the outputs.
+        //match response.outputs().len() {
+        //    0 => (),
+        //    1 => println!("\n➡️  Output\n"),
+        //    _ => println!("\n➡️  Outputs\n"),
+        //};
+        //for output in response.outputs() {
+        //    println!("{}", format!(" • {output}"));
+        //}
+        //println!();
 
-        // Prepare the imports directory.
-        let imports_directory = package.imports_directory();
-
-        // Load all of the imported programs (in order of imports).
-        let programs = program
-            .imports()
-            .keys()
-            .map(|program_id| {
-                // Open the Aleo imported program file.
-                let import_program_file = AleoFile::open(&imports_directory, program_id, false)?;
-                // Return the imported program.
-                Ok(import_program_file.program().clone())
-            })
-            .collect::<Result<Vec<_>>>()?;
-
-        // Deploy the imported programs (in order of imports), and the main program.
-        for program in programs.iter().chain([program.clone()].iter()) {
-            println!("📦 Deploying '{}' to the local development node...\n", program.id().to_string().bold());
-
-            // Create a deployment request.
-            let request = DeployRequest::new(*private_key, program.clone(), self.fee.unwrap_or(0));
-
-            // Send the deployment request to the local development node.
-            match request.send(&endpoint) {
-                Ok(_) => println!("✅ Successfully deployed '{}' to the local development node.", program.id()),
-                Err(error) => {
-                    bail!("❌ Failed to deploy '{}' to the local development node: {}", program.id(), error);
-                }
-            };
+        // Send the request and wait for the response.
+        match request.send(&endpoint) {
+            // TODO: Just send tx id?
+            Ok(_) => {
+                // Prepare the locator.
+                let locator = Locator::<Network>::from_str(&format!("{}/{}", self.program, self.function))?;
+                Ok(format!("✅ Executed '{}'", locator.to_string().bold()))
+            }
+            Err(error) => Err(error),
         }
-
-        Ok("".to_string())
     }
 }

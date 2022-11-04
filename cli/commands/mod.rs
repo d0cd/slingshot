@@ -23,8 +23,8 @@ pub use node::*;
 mod pour;
 pub use pour::*;
 
-mod run;
-pub use run::*;
+mod execute;
+pub use execute::*;
 
 mod update;
 pub use update::*;
@@ -33,7 +33,12 @@ use anyhow::Result;
 use clap::Parser;
 
 #[derive(Debug, Parser)]
-#[clap(name = "slingshot", author = "The Aleo Team <hello@aleo.org>", setting = clap::AppSettings::ColoredHelp)]
+#[clap(
+    name = "slingshot",
+    author = "The Aleo Team <hello@aleo.org>",
+    about = "A lightweight CLI for deploying programs and executing transactions on Aleo.",
+    setting = clap::AppSettings::ColoredHelp
+)]
 pub struct CLI {
     /// Specify the verbosity [options: 0, 1, 2, 3]
     #[clap(default_value = "2", short, long)]
@@ -51,8 +56,8 @@ pub enum Command {
     Node(Node),
     #[clap(name = "pour")]
     Pour(Pour),
-    #[clap(name = "run")]
-    Run(Run),
+    #[clap(name = "execute")]
+    Execute(Execute),
     #[clap(subcommand)]
     Update(Update),
 }
@@ -64,7 +69,7 @@ impl Command {
             Self::Deploy(command) => command.parse(),
             Self::Node(command) => command.parse(),
             Self::Pour(command) => command.parse(),
-            Self::Run(command) => command.parse(),
+            Self::Execute(command) => command.parse(),
             Self::Update(command) => command.parse(),
         }
     }

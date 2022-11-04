@@ -120,13 +120,13 @@ impl<N: Network> Ledger<N> {
             None => bail!("The Aleo account has no records to spend with sufficient balance."),
         };
 
-        Self::create_execution(
+        Self::create_execute(
             ledger,
             private_key,
             &ProgramID::from_str("credits.aleo")?,
             Identifier::from_str("transfer")?,
             &[Value::Record(record), Value::from_str(&format!("{to}"))?, Value::from_str(&format!("{amount}u64"))?],
-            amount,
+            0,
         )
     }
 
@@ -168,7 +168,7 @@ impl<N: Network> Ledger<N> {
     }
 
     /// Creates an execute transaction.
-    pub fn create_execution(
+    pub fn create_execute(
         ledger: Arc<RwLock<InternalLedger<N>>>,
         private_key: &PrivateKey<N>,
         program_id: &ProgramID<N>,
@@ -203,6 +203,7 @@ impl<N: Network> Ledger<N> {
             }
         };
 
+        // TODO: Return outputs.
         // Create a new transaction.
         Transaction::execute(
             ledger.read().vm(),
