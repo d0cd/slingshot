@@ -14,11 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo library. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Aleo, Network};
-use snarkvm::{
-    package::Package,
-    prelude::{Identifier, Locator, Value},
-};
+use crate::Network;
+use snarkvm::prelude::{Identifier, Locator, Value};
 
 use crate::messages::ExecuteRequest;
 use anyhow::{ensure, Result};

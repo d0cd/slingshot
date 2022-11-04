@@ -19,7 +19,7 @@ use crate::{
     messages::{DeployRequest, ExecuteRequest, PourRequest},
 };
 
-use snarkvm::prelude::{BlockStorage, Network, PrivateKey, ProgramStorage, RestError, Transaction};
+use snarkvm::prelude::{Network, PrivateKey, RestError};
 
 use crate::messages::{DeployResponse, ExecuteResponse, PourResponse};
 use parking_lot::RwLock;

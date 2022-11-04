@@ -26,4 +26,4 @@ pub mod ledger;
 pub mod messages;
 
 pub(crate) type Network = snarkvm::prelude::Testnet3;
-pub(crate) type Aleo = snarkvm::circuit::AleoV0;
+pub(crate) type _Aleo = snarkvm::circuit::AleoV0;
