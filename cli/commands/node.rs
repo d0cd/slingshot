@@ -24,6 +24,8 @@ use colored::*;
 use snarkvm::prelude::PrivateKey;
 use std::{path::PathBuf, str::FromStr, sync::Arc};
 
+// TODO: Quiet option
+
 /// Commands to operate a local development node.
 #[derive(Debug, Parser)]
 pub enum Node {

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo library. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Aleo, Network};
+use crate::{messages::PourRequest, Aleo, Network};
 
 use snarkvm::prelude::{Address, Locator, Value};
 
@@ -30,17 +30,30 @@ pub struct Pour {
     address: Address<Network>,
     /// The amount to send.
     #[clap(parse(try_from_str))]
-    input: Value<Network>,
+    amount: u64,
     /// Uses the specified endpoint.
-    #[clap(long, default_value = "http://localhost:4180/testnet3/faucet/pour")]
-    endpoint: String,
+    #[clap(short, long)]
+    endpoint: Option<String>,
 }
 
 impl Pour {
     /// Pours a specified number of Aleo credits into an address.
     #[allow(clippy::format_in_format_args)]
     pub fn parse(self) -> Result<String> {
-        todo!();
-        // Ok(format!("✅ Executed '{}' {}", locator.to_string().bold(), path_string.dimmed()))
+        // Use the provided endpoint, or default to a local faucet.
+        let endpoint = match self.endpoint {
+            Some(endpoint) => endpoint,
+            None => "http://localhost:4180/testnet3/faucet/pour".to_string(),
+        };
+
+        // Construct the request.
+        let request = PourRequest::new(self.address, self.amount);
+
+        // Send the request and wait for the response.
+        match request.send(&endpoint) {
+            // TODO: Just send tx id?
+            Ok(_) => Ok(format!("✅ Poured {} Aleo credits into {}.", self.amount, self.address)),
+            Err(error) => Err(error),
+        }
     }
 }

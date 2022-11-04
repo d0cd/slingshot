@@ -14,9 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo library. If not, see <https://www.gnu.org/licenses/>.
 
-use snarkvm::prelude::{Address, Network, Value};
+use snarkvm::prelude::{Address, Network};
 
-use crate::commands::Pour;
 use anyhow::Result;
 use serde::{de, ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use warp::{reply::Response, Reply};

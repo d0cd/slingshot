@@ -17,8 +17,8 @@
 pub mod load;
 pub use load::*;
 
-pub mod routes;
-pub use routes::*;
+pub mod handlers;
+pub use handlers::*;
 
 use snarkvm::prelude::{
     with,
@@ -37,12 +37,14 @@ use snarkvm::prelude::{
     Value,
     ViewKey,
     Zero,
+    U64,
     VM,
 };
 
 use anyhow::{bail, ensure, Result};
 use core::str::FromStr;
 use parking_lot::RwLock;
+use snarkvm::circuit::Mode;
 use std::{convert::TryFrom, sync::Arc};
 use warp::{reply, Filter, Rejection};
 
@@ -109,17 +111,17 @@ impl<N: Network> Ledger<N> {
         // Derive the view key from the private key.
         let view_key = ViewKey::try_from(private_key)?;
 
-        // Fetch the unspent record with the least gates.
+        // Fetch the unspent record with the least gates, but enough for the transfer.
         let record = ledger
             .read()
             .find_records(&view_key, RecordsFilter::Unspent)?
-            .filter(|(_, record)| !record.gates().is_zero())
+            .filter(|(_, record)| (**record.gates()).ge(&U64::new(amount)))
             .min_by(|(_, a), (_, b)| (**a.gates()).cmp(&**b.gates()));
 
         // Prepare the record.
         let record = match record {
             Some((_, record)) => record,
-            None => bail!("The Aleo account has no records to spend."),
+            None => bail!("The Aleo account has no records to spend with sufficient balance."),
         };
 
         // Create a new transaction.
