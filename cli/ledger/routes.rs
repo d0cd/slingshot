@@ -56,10 +56,30 @@ impl<N: Network> Ledger<N> {
 
     /// Deploys a program to the ledger.
     pub(crate) async fn program_deploy(
-        _request: DeployRequest<N>,
-        _ledger: Arc<RwLock<InternalLedger<N>>>,
+        request: DeployRequest<N>,
+        ledger: Arc<RwLock<InternalLedger<N>>>,
     ) -> Result<impl Reply, Rejection> {
-        Err::<DeployResponse<N>, _>(reject::custom(RestError::Request(String::from("deployment is not supported"))))
+        // Construct the transaction.
+        let transaction = match Ledger::create_deploy(
+            ledger.clone(),
+            request.private_key(),
+            request.program(),
+            request.additional_fee(),
+        ) {
+            Ok(transaction) => transaction,
+            Err(_) => {
+                return Err(reject::custom(RestError::Request(String::from("failed to construct the transaction"))));
+            }
+        };
+
+        // Construct the response.
+        let response = DeployResponse::<N>::new(transaction.id());
+
+        // Add the transaction to the memory pool.
+        match ledger.write().add_to_memory_pool(transaction) {
+            Ok(_) => Ok(response),
+            Err(_) => Err(reject::custom(RestError::Request(String::from("failed to add transaction to mempool")))),
+        }
     }
 
     /// Executes a program on the ledger.

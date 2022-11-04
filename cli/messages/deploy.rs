@@ -16,7 +16,7 @@
 
 use snarkvm::{
     compiler::{Deployment, Program},
-    prelude::{Address, Network},
+    prelude::{Address, Network, PrivateKey},
 };
 
 use anyhow::Result;
@@ -24,14 +24,15 @@ use serde::{de, ser::SerializeStruct, Deserialize, Deserializer, Serialize, Seri
 use warp::{reply::Response, Reply};
 
 pub struct DeployRequest<N: Network> {
-    caller: Address<N>,
+    private_key: PrivateKey<N>,
     program: Program<N>,
+    additional_fee: u64,
 }
 
 impl<N: Network> DeployRequest<N> {
     /// Initializes a new instance of the deploy request.
-    pub fn new(caller: Address<N>, program: Program<N>) -> Self {
-        Self { caller, program }
+    pub fn new(private_key: PrivateKey<N>, program: Program<N>, additional_fee: u64) -> Self {
+        Self { private_key, program, additional_fee }
     }
 
     /// Sends the request to the given endpoint.
@@ -39,25 +40,32 @@ impl<N: Network> DeployRequest<N> {
         Ok(ureq::post(endpoint).send_json(self)?.into_json()?)
     }
 
-    /// Returns the program address.
-    pub const fn caller(&self) -> &Address<N> {
-        &self.caller
+    /// Returns the private key of the account deploying the program.
+    pub const fn private_key(&self) -> &PrivateKey<N> {
+        &self.private_key
     }
 
-    /// Returns the imports.
+    /// Returns the program to be deployed.
     pub const fn program(&self) -> &Program<N> {
         &self.program
+    }
+
+    /// Returns the additional fee associated with the request.
+    pub const fn additional_fee(&self) -> u64 {
+        self.additional_fee
     }
 }
 
 impl<N: Network> Serialize for DeployRequest<N> {
     /// Serializes the deploy request into string or bytes.
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut request = serializer.serialize_struct("DeployRequest", 2)?;
-        // Serialize the caller.
-        request.serialize_field("caller", &self.caller)?;
+        let mut request = serializer.serialize_struct("DeployRequest", 3)?;
+        // Serialize the private_key.
+        request.serialize_field("private_key", &self.private_key)?;
         // Serialize the program.
         request.serialize_field("program", &self.program)?;
+        // Serialize the additional_fee.
+        request.serialize_field("additional_fee", &self.additional_fee)?;
         request.end()
     }
 }
@@ -69,27 +77,29 @@ impl<'de, N: Network> Deserialize<'de> for DeployRequest<N> {
         let mut request = serde_json::Value::deserialize(deserializer)?;
         // Recover the leaf.
         Ok(Self::new(
-            // Retrieve the caller.
-            serde_json::from_value(request["caller"].take()).map_err(de::Error::custom)?,
+            // Retrieve the private_key.
+            serde_json::from_value(request["private_key"].take()).map_err(de::Error::custom)?,
             // Retrieve the program.
             serde_json::from_value(request["program"].take()).map_err(de::Error::custom)?,
+            // Retrieve the additional_fee.
+            serde_json::from_value(request["additional_fee"].take()).map_err(de::Error::custom)?,
         ))
     }
 }
 
 pub struct DeployResponse<N: Network> {
-    deployment: Deployment<N>,
+    transaction_id: N::TransactionID,
 }
 
 impl<N: Network> DeployResponse<N> {
     /// Initializes a new deploy response.
-    pub const fn new(deployment: Deployment<N>) -> Self {
-        Self { deployment }
+    pub const fn new(transaction_id: N::TransactionID) -> Self {
+        Self { transaction_id }
     }
 
     /// Returns the associated deployment.
-    pub const fn deployment(&self) -> &Deployment<N> {
-        &self.deployment
+    pub const fn transaction_id(&self) -> &N::TransactionID {
+        &self.transaction_id
     }
 }
 
@@ -97,7 +107,7 @@ impl<N: Network> Serialize for DeployResponse<N> {
     /// Serializes the deploy response into string or bytes.
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut response = serializer.serialize_struct("DeployResponse", 1)?;
-        response.serialize_field("deployment", &self.deployment)?;
+        response.serialize_field("transaction_id", &self.transaction_id)?;
         response.end()
     }
 }
@@ -109,8 +119,8 @@ impl<'de, N: Network> Deserialize<'de> for DeployResponse<N> {
         let mut response = serde_json::Value::deserialize(deserializer)?;
         // Recover the leaf.
         Ok(Self::new(
-            // Retrieve the program ID.
-            serde_json::from_value(response["deployment"].take()).map_err(de::Error::custom)?,
+            // Retrieve the transaction_id.
+            serde_json::from_value(response["transaction_id"].take()).map_err(de::Error::custom)?,
         ))
     }
 }
