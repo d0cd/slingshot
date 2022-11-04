@@ -86,6 +86,7 @@ impl<N: Network> Ledger<N> {
                 .and(warp::path!("testnet3" / "faucet" / "pour"))
                 .and(warp::body::json())
                 .and(with(ledger.clone()))
+                .and(with(*private_key))
                 .and_then(Self::faucet_pour);
 
             // POST /testnet3/program/deploy
@@ -101,15 +102,6 @@ impl<N: Network> Ledger<N> {
                 .and(warp::body::json())
                 .and(with(ledger.clone()))
                 .and_then(Self::program_execute);
-
-            // // POST /testnet3/transaction/broadcast
-            // let transaction_broadcast = warp::post()
-            //     .and(warp::path!("testnet3" / "transaction" / "broadcast"))
-            //     .and(warp::body::content_length_limit(10 * 1024 * 1024))
-            //     .and(warp::body::json())
-            //     .and(with(self.ledger_sender.clone()))
-            //     .and(with(self.ledger.clone()))
-            //     .and_then(Self::transaction_broadcast);
 
             get_development_private_key
                 .or(get_development_view_key)

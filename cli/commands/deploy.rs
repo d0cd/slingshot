@@ -37,24 +37,6 @@ pub struct Deploy {
 impl Deploy {
     /// Deploys an Aleo program with the specified name.
     pub fn parse(self) -> Result<String> {
-        // Derive the program directory path.
-        let path = std::env::current_dir()?;
-
-        // Load the package.
-        let package = Package::<Network>::open(&path)?;
-
-        // Construct a new deployment.
-        let deployment = package.deploy::<Aleo>(None)?;
-
-        // Form a transaction from the deployment.
-        let transaction = Transaction::from_deployment(deployment)?;
-
-        println!();
-
-        // Prepare the path string.
-        let path_string = format!("(in \"{}\")", path.display());
-
-        // Log the deploy as successful.
-        Ok(format!("✅ Deployed '{}' {}", package.program_id().to_string().bold(), path_string.dimmed()))
+        todo!()
     }
 }

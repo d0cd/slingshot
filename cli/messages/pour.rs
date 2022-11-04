@@ -16,17 +16,19 @@
 
 use snarkvm::prelude::{Address, Network, Value};
 
+use crate::commands::Pour;
 use anyhow::Result;
 use serde::{de, ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
+use warp::{reply::Response, Reply};
 
 pub struct PourRequest<N: Network> {
     address: Address<N>,
-    amount: Value<N>,
+    amount: u64,
 }
 
 impl<N: Network> PourRequest<N> {
     /// Initializes a new instance of a pour request.
-    pub fn new(address: Address<N>, amount: Value<N>) -> Self {
+    pub fn new(address: Address<N>, amount: u64) -> Self {
         Self { address, amount }
     }
 
@@ -41,8 +43,8 @@ impl<N: Network> PourRequest<N> {
     }
 
     /// Returns the amount to be received.
-    pub const fn amount(&self) -> &Value<N> {
-        &self.amount
+    pub const fn amount(&self) -> u64 {
+        self.amount
     }
 }
 
@@ -74,33 +76,26 @@ impl<'de, N: Network> Deserialize<'de> for PourRequest<N> {
 }
 
 pub struct PourResponse<N: Network> {
-    address: Address<N>,
-    balance: Value<N>,
+    transaction_id: N::TransactionID,
 }
 
 impl<N: Network> PourResponse<N> {
     /// Initializes a new pour response.
-    pub const fn new(address: Address<N>, balance: Value<N>) -> Self {
-        Self { address, balance }
+    pub const fn new(transaction_id: N::TransactionID) -> Self {
+        Self { transaction_id }
     }
 
-    /// Returns the address that received credits from the faucet.
-    pub const fn address(&self) -> &Address<N> {
-        &self.address
-    }
-
-    /// Returns the balance of the address that received credits from the faucet.
-    pub const fn balance(&self) -> &Value<N> {
-        &self.balance
+    /// Returns the transaction ID associated with the pour request.
+    pub const fn transaction_id(&self) -> &N::TransactionID {
+        &self.transaction_id
     }
 }
 
 impl<N: Network> Serialize for PourResponse<N> {
     /// Serializes the pour response into string or bytes.
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut response = serializer.serialize_struct("PourResponse", 2)?;
-        response.serialize_field("address", &self.address)?;
-        response.serialize_field("balance", &self.balance)?;
+        let mut response = serializer.serialize_struct("PourResponse", 1)?;
+        response.serialize_field("transaction_id", &self.transaction_id)?;
         response.end()
     }
 }
@@ -112,10 +107,14 @@ impl<'de, N: Network> Deserialize<'de> for PourResponse<N> {
         let mut response = serde_json::Value::deserialize(deserializer)?;
         // Recover the leaf.
         Ok(Self::new(
-            // Retrieve the address.
-            serde_json::from_value(response["address"].take()).map_err(de::Error::custom)?,
-            // Retrieve the balance.
-            serde_json::from_value(response["balance"].take()).map_err(de::Error::custom)?,
+            // Retrieve the transaction_id.
+            serde_json::from_value(response["transaction_id"].take()).map_err(de::Error::custom)?,
         ))
+    }
+}
+
+impl<N: Network> Reply for PourResponse<N> {
+    fn into_response(self) -> Response {
+        warp::reply::json(&self).into_response()
     }
 }

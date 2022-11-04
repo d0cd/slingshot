@@ -73,7 +73,8 @@ impl Node {
 
                 loop {
                     // Create a transfer transaction.
-                    let transaction = ledger.create_transfer(ledger.address(), 1)?;
+                    let transaction =
+                        Ledger::create_transfer(ledger.ledger.clone(), ledger.private_key(), ledger.address(), 1)?;
                     // Add the transaction to the memory pool.
                     ledger.add_to_memory_pool(transaction)?;
 

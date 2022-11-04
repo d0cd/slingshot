@@ -74,6 +74,11 @@ impl<N: Network> Ledger<N> {
         &self.address
     }
 
+    /// Returns the private key.
+    pub const fn private_key(&self) -> &PrivateKey<N> {
+        &self.private_key
+    }
+
     /// Adds the given transaction to the memory pool.
     pub fn add_to_memory_pool(&self, transaction: Transaction<N>) -> Result<()> {
         self.ledger.write().add_to_memory_pool(transaction)
@@ -95,12 +100,19 @@ impl<N: Network> Ledger<N> {
     }
 
     /// Creates a transfer transaction.
-    pub fn create_transfer(&self, to: &Address<N>, amount: u64) -> Result<Transaction<N>> {
+    pub fn create_transfer(
+        ledger: Arc<RwLock<InternalLedger<N>>>,
+        private_key: &PrivateKey<N>,
+        to: &Address<N>,
+        amount: u64,
+    ) -> Result<Transaction<N>> {
+        // Derive the view key from the private key.
+        let view_key = ViewKey::try_from(private_key)?;
+
         // Fetch the unspent record with the least gates.
-        let record = self
-            .ledger
+        let record = ledger
             .read()
-            .find_records(&self.view_key, RecordsFilter::Unspent)?
+            .find_records(&view_key, RecordsFilter::Unspent)?
             .filter(|(_, record)| !record.gates().is_zero())
             .min_by(|(_, a), (_, b)| (**a.gates()).cmp(&**b.gates()));
 
@@ -112,8 +124,8 @@ impl<N: Network> Ledger<N> {
 
         // Create a new transaction.
         Transaction::execute(
-            self.ledger.read().vm(),
-            &self.private_key,
+            ledger.read().vm(),
+            private_key,
             &ProgramID::from_str("credits.aleo")?,
             Identifier::from_str("transfer")?,
             &[Value::Record(record), Value::from_str(&format!("{to}"))?, Value::from_str(&format!("{amount}u64"))?],
@@ -123,12 +135,19 @@ impl<N: Network> Ledger<N> {
     }
 
     /// Creates a deploy transaction.
-    fn create_deploy(&self, program: &Program<N>, additional_fee: u64) -> Result<Transaction<N>> {
+    fn create_deploy(
+        ledger: Arc<RwLock<InternalLedger<N>>>,
+        private_key: &PrivateKey<N>,
+        program: &Program<N>,
+        additional_fee: u64,
+    ) -> Result<Transaction<N>> {
+        // Construct the view key from the private key.
+        let view_key = ViewKey::try_from(private_key)?;
+
         // Fetch the unspent record with the most gates.
-        let record = self
-            .ledger
+        let record = ledger
             .read()
-            .find_records(&self.view_key, RecordsFilter::Unspent)?
+            .find_records(&view_key, RecordsFilter::Unspent)?
             .max_by(|(_, a), (_, b)| (**a.gates()).cmp(&**b.gates()));
 
         // Prepare the additional fee.
@@ -140,14 +159,14 @@ impl<N: Network> Ledger<N> {
 
         // Deploy.
         let transaction = Transaction::deploy(
-            self.ledger.read().vm(),
-            &self.private_key,
+            ledger.read().vm(),
+            private_key,
             program,
             (credits, additional_fee),
             &mut rand::thread_rng(),
         )?;
         // Verify.
-        assert!(self.ledger.read().vm().verify(&transaction));
+        assert!(ledger.read().vm().verify(&transaction));
         // Return the transaction.
         Ok(transaction)
     }

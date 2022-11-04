@@ -19,35 +19,54 @@ use crate::{
     messages::{DeployRequest, ExecuteRequest, PourRequest},
 };
 
-use snarkvm::prelude::{BlockStorage, Network, ProgramStorage, Transaction};
+use snarkvm::prelude::{BlockStorage, Network, PrivateKey, ProgramStorage, RestError, Transaction};
 
+use crate::messages::{DeployResponse, ExecuteResponse, PourResponse};
 use parking_lot::RwLock;
 use std::sync::Arc;
-use warp::{Rejection, Reply};
+use warp::{reject, Rejection, Reply};
 
 impl<N: Network> Ledger<N> {
     /// Pours a specified number of credits from the faucet to the recipient.
     pub(crate) async fn faucet_pour(
         request: PourRequest<N>,
         ledger: Arc<RwLock<InternalLedger<N>>>,
+        private_key: PrivateKey<N>,
     ) -> Result<impl Reply, Rejection> {
-        let transaction = ledger.cre
-        todo!()
+        // Construct the transaction.
+        let transaction =
+            match Ledger::create_transfer(ledger.clone(), &private_key, request.address(), request.amount()) {
+                Ok(transaction) => transaction,
+                Err(_) => {
+                    return Err(reject::custom(RestError::Request(String::from(
+                        "failed to construct the transaction",
+                    ))));
+                }
+            };
+
+        // Construct the response.
+        let response = PourResponse::<N>::new(transaction.id());
+
+        // Add the transaction to the memory pool.
+        match ledger.write().add_to_memory_pool(transaction) {
+            Ok(_) => Ok(response),
+            Err(_) => Err(reject::custom(RestError::Request(String::from("failed to add transaction to mempool")))),
+        }
     }
 
     /// Deploys a program to the ledger.
     pub(crate) async fn program_deploy(
-        request: DeployRequest<N>,
-        ledger: Arc<RwLock<InternalLedger<N>>>,
+        _request: DeployRequest<N>,
+        _ledger: Arc<RwLock<InternalLedger<N>>>,
     ) -> Result<impl Reply, Rejection> {
-        todo!()
+        Err::<DeployResponse<N>, _>(reject::custom(RestError::Request(String::from("deployment is not supported"))))
     }
 
     /// Executes a program on the ledger.
     pub(crate) async fn program_execute(
-        request: ExecuteRequest<N>,
-        ledger: Arc<RwLock<InternalLedger<N>>>,
+        _request: ExecuteRequest<N>,
+        _ledger: Arc<RwLock<InternalLedger<N>>>,
     ) -> Result<impl Reply, Rejection> {
-        todo!()
+        Err::<ExecuteResponse<N>, _>(reject::custom(RestError::Request(String::from("execution is not supported"))))
     }
 }

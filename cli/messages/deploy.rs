@@ -21,6 +21,7 @@ use snarkvm::{
 
 use anyhow::Result;
 use serde::{de, ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
+use warp::{reply::Response, Reply};
 
 pub struct DeployRequest<N: Network> {
     caller: Address<N>,
@@ -111,5 +112,11 @@ impl<'de, N: Network> Deserialize<'de> for DeployResponse<N> {
             // Retrieve the program ID.
             serde_json::from_value(response["deployment"].take()).map_err(de::Error::custom)?,
         ))
+    }
+}
+
+impl<N: Network> Reply for DeployResponse<N> {
+    fn into_response(self) -> Response {
+        warp::reply::json(&self).into_response()
     }
 }
