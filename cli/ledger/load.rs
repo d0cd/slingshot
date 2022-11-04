@@ -16,28 +16,9 @@
 
 use crate::ledger::{InternalLedger, InternalServer, InternalStorage, Ledger};
 
-use snarkvm::prelude::{
-    with,
-    Address,
-    Block,
-    BlockMemory,
-    Identifier,
-    Network,
-    PrivateKey,
-    Program,
-    ProgramID,
-    ProgramMemory,
-    ProgramStore,
-    RecordsFilter,
-    Transaction,
-    Value,
-    ViewKey,
-    Zero,
-    VM,
-};
+use snarkvm::prelude::{with, Address, Block, Network, PrivateKey, ProgramStore, ViewKey, VM};
 
-use anyhow::{bail, ensure, Result};
-use core::str::FromStr;
+use anyhow::Result;
 use parking_lot::RwLock;
 use std::{convert::TryFrom, sync::Arc};
 use warp::{reply, Filter, Rejection};
@@ -126,5 +107,3 @@ impl<N: Network> Ledger<N> {
         Ok(Arc::new(Self { ledger, runtime, server, private_key: *private_key, view_key, address }))
     }
 }
-
-impl<N: Network> Ledger<N> {}

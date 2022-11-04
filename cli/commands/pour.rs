@@ -14,13 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo library. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{messages::PourRequest, Aleo, Network};
+use crate::{messages::PourRequest, Network};
 
-use snarkvm::prelude::{Address, Locator, Value};
+use snarkvm::prelude::Address;
 
 use anyhow::Result;
 use clap::Parser;
-use colored::Colorize;
 
 /// Pours Aleo credits into an account.
 #[derive(Debug, Parser)]

@@ -14,18 +14,17 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo library. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Aleo, Network};
-use snarkvm::package::Package;
-use std::{path::PathBuf, str::FromStr};
+use crate::{messages::DeployRequest, Network};
 
-use crate::messages::DeployRequest;
+use snarkvm::{
+    file::{AleoFile, Manifest},
+    package::Package,
+};
+
 use anyhow::{bail, ensure, Result};
 use clap::Parser;
 use colored::Colorize;
-use snarkvm::{
-    file::{AleoFile, Manifest},
-    prelude::Transaction,
-};
+use std::{path::PathBuf, str::FromStr};
 
 // TODO: Prettify
 

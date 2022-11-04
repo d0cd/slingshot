@@ -21,7 +21,6 @@ pub mod handlers;
 pub use handlers::*;
 
 use snarkvm::prelude::{
-    with,
     Address,
     Block,
     BlockMemory,
@@ -31,22 +30,18 @@ use snarkvm::prelude::{
     Program,
     ProgramID,
     ProgramMemory,
-    ProgramStore,
     RecordsFilter,
     Transaction,
     Value,
     ViewKey,
     Zero,
     U64,
-    VM,
 };
 
 use anyhow::{bail, ensure, Result};
 use core::str::FromStr;
 use parking_lot::RwLock;
-use snarkvm::circuit::Mode;
 use std::{convert::TryFrom, sync::Arc};
-use warp::{reply, Filter, Rejection};
 
 pub(crate) type InternalStorage<N> = ProgramMemory<N>;
 pub(crate) type InternalLedger<N> = snarkvm::prelude::Ledger<N, BlockMemory<N>, InternalStorage<N>>;
@@ -111,7 +106,8 @@ impl<N: Network> Ledger<N> {
         // Derive the view key from the private key.
         let view_key = ViewKey::try_from(private_key)?;
 
-        // Fetch the unspent record with the least gates, but enough for the transfer.
+        // TODO: Why not max?
+        // Fetch the unspent record with the least gates, but enough for the additional fee.
         let record = ledger
             .read()
             .find_records(&view_key, RecordsFilter::Unspent)?
@@ -124,15 +120,13 @@ impl<N: Network> Ledger<N> {
             None => bail!("The Aleo account has no records to spend with sufficient balance."),
         };
 
-        // Create a new transaction.
-        Transaction::execute(
-            ledger.read().vm(),
+        Self::create_execution(
+            ledger,
             private_key,
             &ProgramID::from_str("credits.aleo")?,
             Identifier::from_str("transfer")?,
             &[Value::Record(record), Value::from_str(&format!("{to}"))?, Value::from_str(&format!("{amount}u64"))?],
-            None,
-            &mut rand::thread_rng(),
+            amount,
         )
     }
 
@@ -171,5 +165,53 @@ impl<N: Network> Ledger<N> {
         assert!(ledger.read().vm().verify(&transaction));
         // Return the transaction.
         Ok(transaction)
+    }
+
+    /// Creates an execute transaction.
+    pub fn create_execution(
+        ledger: Arc<RwLock<InternalLedger<N>>>,
+        private_key: &PrivateKey<N>,
+        program_id: &ProgramID<N>,
+        function_name: Identifier<N>,
+        inputs: &[Value<N>],
+        amount: u64,
+    ) -> Result<Transaction<N>> {
+        // Prepare the additional fee.
+        let additional_fee = match amount.is_zero() {
+            // If the amount is zero, then we do not need to spend any records.
+            true => None,
+            // Otherwise, find an appropriate record to spend.
+            false => {
+                // Derive the view key from the private key.
+                let view_key = ViewKey::try_from(private_key)?;
+
+                // TODO: Why not max?
+                // Fetch the unspent record with the least gates, but enough for the additional fee.
+                let record = ledger
+                    .read()
+                    .find_records(&view_key, RecordsFilter::Unspent)?
+                    .filter(|(_, record)| (**record.gates()).ge(&U64::new(amount)))
+                    .min_by(|(_, a), (_, b)| (**a.gates()).cmp(&**b.gates()));
+
+                // Prepare the record.
+                let record = match record {
+                    Some((_, record)) => record,
+                    None => bail!("The Aleo account has no records to spend with sufficient balance."),
+                };
+
+                Some((record, amount))
+            }
+        };
+
+        // Create a new transaction.
+        Transaction::execute(
+            ledger.read().vm(),
+            private_key,
+            program_id,
+            function_name,
+            inputs,
+            additional_fee,
+            &mut rand::thread_rng(),
+        )
     }
 }
