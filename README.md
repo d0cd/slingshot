@@ -55,7 +55,21 @@ slingshot
 ## 3. Usage Guide
 
 ### 3.1 Starting a development node
+```
+slingshot node start --key <PRIVATE_KEY>
+```
+
+### 3.2 Pour from faucet
+```
+slingshot pour <ADDRESS> <AMOUNT>
+```
 
 ### 3.2 Deploying a program
+```
+slingshot deploy --path <PATH_TO_DIR> 
+```
 
 ### 3.3 Executing a program 
+```
+slingshot execute <PROGRAM_NAME> <FUNCTION_NAME> <INPUTS>
+```
