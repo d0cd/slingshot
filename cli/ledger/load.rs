@@ -16,7 +16,8 @@
 
 use crate::ledger::{InternalLedger, InternalServer, InternalStorage, Ledger};
 
-use snarkvm::prelude::{with, Address, Block, Network, PrivateKey, ProgramStore, ViewKey, VM};
+use snarkos_node_rest::with;
+use snarkvm::prelude::{Address, Block, Network, PrivateKey, ProgramStore, ViewKey, VM};
 
 use anyhow::Result;
 use parking_lot::RwLock;
@@ -45,7 +46,7 @@ impl<N: Network> Ledger<N> {
             // GET /testnet3/development/privateKey
             let get_development_private_key = warp::get()
                 .and(warp::path!("testnet3" / "development" / "privateKey"))
-                .and(snarkvm::rest::with(*private_key))
+                .and(snark(*private_key))
                 .and_then(|private_key: PrivateKey<N>| async move {
                     Ok::<_, Rejection>(reply::json(&private_key.to_string()))
                 });

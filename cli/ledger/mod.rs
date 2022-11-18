@@ -20,6 +20,7 @@ pub use load::*;
 pub mod handlers;
 pub use handlers::*;
 
+use snarkos_node_ledger::RecordsFilter;
 use snarkvm::prelude::{
     Address,
     Block,
@@ -30,7 +31,6 @@ use snarkvm::prelude::{
     Program,
     ProgramID,
     ProgramMemory,
-    RecordsFilter,
     Transaction,
     Value,
     ViewKey,

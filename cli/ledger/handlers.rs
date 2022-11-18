@@ -16,12 +16,12 @@
 
 use crate::{
     ledger::{InternalLedger, Ledger},
-    messages::{DeployRequest, ExecuteRequest, PourRequest},
+    messages::{DeployRequest, DeployResponse, ExecuteRequest, ExecuteResponse, PourRequest, PourResponse},
 };
 
-use snarkvm::prelude::{Network, PrivateKey, RestError};
+use snarkos_node_rest::RestError;
+use snarkvm::prelude::{Network, PrivateKey};
 
-use crate::messages::{DeployResponse, ExecuteResponse, PourResponse};
 use parking_lot::RwLock;
 use std::sync::Arc;
 use warp::{reject, Rejection, Reply};
