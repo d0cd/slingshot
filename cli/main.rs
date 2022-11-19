@@ -14,19 +14,19 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo library. If not, see <https://www.gnu.org/licenses/>.
 
-// use slingshot::{commands::CLI, helpers::Updater};
-//
-// use clap::Parser;
+use slingshot::{commands::CLI, helpers::Updater};
+
+use clap::Parser;
 
 fn main() -> anyhow::Result<()> {
-    // // Parse the given arguments.
-    // let cli = CLI::parse();
-    // // Run the updater.
-    // println!("{}", Updater::print_cli());
-    // // Run the CLI.
-    // match cli.command.parse() {
-    //     Ok(output) => println!("{output}\n"),
-    //     Err(error) => println!("⚠️  {error}\n"),
-    // }
+    // Parse the given arguments.
+    let cli = CLI::parse();
+    // Run the updater.
+    println!("{}", Updater::print_cli());
+    // Run the CLI.
+    match cli.command.parse() {
+        Ok(output) => println!("{output}\n"),
+        Err(error) => println!("⚠️  {error}\n"),
+    }
     Ok(())
 }
