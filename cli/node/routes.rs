@@ -166,24 +166,24 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
             .and(with(self.ledger.clone()))
             .and_then(Self::find_transition_id);
 
-        // GET /testnet3/records/all
-        let records_all = warp::get()
+        // POST /testnet3/records/all
+        let records_all = warp::post()
             .and(warp::path!("testnet3" / "records" / "all"))
             .and(warp::body::content_length_limit(128))
             .and(warp::body::json())
             .and(with(self.ledger.clone()))
             .and_then(Self::records_all);
 
-        // GET /testnet3/records/spent
-        let records_spent = warp::get()
+        // POST /testnet3/records/spent
+        let records_spent = warp::post()
             .and(warp::path!("testnet3" / "records" / "spent"))
             .and(warp::body::content_length_limit(128))
             .and(warp::body::json())
             .and(with(self.ledger.clone()))
             .and_then(Self::records_spent);
 
-        // GET /testnet3/records/unspent
-        let records_unspent = warp::get()
+        // POST /testnet3/records/unspent
+        let records_unspent = warp::post()
             .and(warp::path!("testnet3" / "records" / "unspent"))
             .and(warp::body::content_length_limit(128))
             .and(warp::body::json())
