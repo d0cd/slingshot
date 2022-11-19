@@ -18,14 +18,25 @@ use crate::node::{Rest, SingleNodeConsensus};
 
 use snarkos_node_rest::{with, OrReject, RestError};
 
-use snarkvm::prelude::{cfg_into_iter, Address, ConsensusStorage, Field, Network, Program, ProgramID, ViewKey};
+use snarkvm::prelude::{
+    cfg_into_iter,
+    Address,
+    ConsensusStorage,
+    Field,
+    Network,
+    PrivateKey,
+    Program,
+    ProgramID,
+    ViewKey,
+};
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use snarkos_node_ledger::{Ledger, RecordsFilter};
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 use warp::{http::StatusCode, reject, reply, Filter, Rejection, Reply};
 
+use crate::messages::{PourRequest, PourResponse};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
@@ -131,7 +142,7 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
         // GET /testnet3/node/address
         let get_node_address = warp::get()
             .and(warp::path!("testnet3" / "node" / "address"))
-            .and(with(self.address))
+            .and(with(self.account.address()))
             .and_then(|address: Address<N>| async move { Ok::<_, Rejection>(reply::json(&address.to_string())) });
 
         // GET /testnet3/find/blockHash/{transactionID}
@@ -190,6 +201,18 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
             .and(with(self.ledger.clone()))
             .and_then(Self::records_unspent);
 
+        // POST /testnet3/faucet/pour
+        let faucet_pour = warp::post()
+            .and(warp::path!("testnet3" / "faucet" / "pour"))
+            .and(warp::body::content_length_limit(128))
+            .and(warp::body::json())
+            .and(with(*self.account.private_key()))
+            .and(with(self.ledger.clone()))
+            .and(with(self.consensus.clone()))
+            .and_then(Self::faucet_pour);
+
+        // TODO: Faucet total.
+
         // Return the list of routes.
         latest_height
             .or(latest_hash)
@@ -212,6 +235,7 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
             .or(records_all)
             .or(records_spent)
             .or(records_unspent)
+            .or(faucet_pour)
     }
 }
 
@@ -361,5 +385,35 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
         let records = ledger.find_records(&view_key, RecordsFilter::Unspent).or_reject()?.collect::<IndexMap<_, _>>();
         // Return the records.
         Ok(reply::with_status(reply::json(&records), StatusCode::OK))
+    }
+
+    /// Pours a specified number of credits from the faucet to the recipient.
+    pub(crate) async fn faucet_pour(
+        request: PourRequest<N>,
+        private_key: PrivateKey<N>,
+        ledger: Ledger<N, C>,
+        consensus: Option<SingleNodeConsensus<N, C>>,
+    ) -> Result<impl Reply, Rejection> {
+        // Construct the transaction.
+        let transaction = match Ledger::create_transfer(&ledger, &private_key, *request.address(), request.amount()) {
+            Ok(transaction) => transaction,
+            Err(_) => {
+                return Err(reject::custom(RestError::Request(String::from("failed to construct the transaction"))));
+            }
+        };
+
+        // Construct the response.
+        let response = PourResponse::<N>::new(transaction.id());
+
+        // Add the transaction to the memory pool.
+        match consensus {
+            Some(consensus) => match consensus.add_unconfirmed_transaction(transaction) {
+                Ok(_) => Ok(response),
+                Err(_) => Err(reject::custom(RestError::Request(String::from(
+                    "failed to add the transaction to the memory pool",
+                )))),
+            },
+            None => Err(reject::custom(RestError::Request(String::from("no memory pool available")))),
+        }
     }
 }

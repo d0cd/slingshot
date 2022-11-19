@@ -18,6 +18,7 @@
 
 use crate::node::SingleNodeConsensus;
 
+use snarkos_account::Account;
 use snarkos_node_ledger::Ledger;
 use snarkvm::{console::account::Address, prelude::Network, synthesizer::ConsensusStorage};
 
@@ -30,8 +31,8 @@ use warp::{http::header::HeaderName, Filter};
 /// A REST API server for the ledger.
 #[derive(Clone)]
 pub struct Rest<N: Network, C: ConsensusStorage<N>> {
-    /// The node address.
-    pub(crate) address: Address<N>,
+    /// The node account.
+    pub(crate) account: Account<N>,
     /// The consensus module.
     pub(crate) consensus: Option<SingleNodeConsensus<N, C>>,
     /// The ledger.
@@ -44,12 +45,12 @@ impl<N: Network, C: 'static + ConsensusStorage<N>> Rest<N, C> {
     /// Initializes a new instance of the server.
     pub fn start(
         rest_ip: SocketAddr,
-        address: Address<N>,
+        account: Account<N>,
         consensus: Option<SingleNodeConsensus<N, C>>,
         ledger: Ledger<N, C>,
     ) -> Result<Self> {
         // Initialize the server.
-        let mut server = Self { address, consensus, ledger, handles: vec![] };
+        let mut server = Self { account, consensus, ledger, handles: vec![] };
         // Spawn the server.
         server.spawn_server(rest_ip);
         // Return the server.

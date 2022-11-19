@@ -96,7 +96,7 @@ impl<N: Network> DevelopmentBeacon<N> {
         // Initialize the REST server.
         let rest = match rest_ip {
             Some(rest_ip) => {
-                Some(Arc::new(Rest::start(rest_ip, account.address(), Some(consensus.clone()), ledger.clone())?))
+                Some(Arc::new(Rest::start(rest_ip, account.clone(), Some(consensus.clone()), ledger.clone())?))
             }
             None => None,
         };
