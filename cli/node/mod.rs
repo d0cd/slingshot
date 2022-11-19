@@ -21,3 +21,9 @@ pub use consensus::*;
 
 pub mod pool;
 pub use pool::*;
+
+pub mod rest;
+pub use rest::*;
+
+pub mod routes;
+pub use routes::*;
