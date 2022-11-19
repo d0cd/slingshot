@@ -16,7 +16,7 @@
 
 use crate::node::SingleNodeConsensus;
 
-use snarkvm::prelude::{ConsensusStorage, Itertools, Network, Transaction};
+use snarkvm::prelude::{ConsensusStorage, Network, Transaction};
 
 use parking_lot::RwLock;
 use std::{collections::HashMap, sync::Arc};

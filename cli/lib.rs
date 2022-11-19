@@ -17,16 +17,17 @@
 #![forbid(unsafe_code)]
 
 #[macro_use]
+extern crate async_trait;
+#[macro_use]
 extern crate thiserror;
-
 #[macro_use]
 extern crate tracing;
 
-// pub mod commands;
-// pub mod errors;
-// pub mod helpers;
+pub mod commands;
+pub mod errors;
+pub mod helpers;
 // pub mod ledger;
-// pub mod messages;
+pub mod messages;
 pub mod node;
 
 pub(crate) type Network = snarkvm::prelude::Testnet3;

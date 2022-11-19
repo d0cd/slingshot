@@ -53,6 +53,7 @@ impl Execute {
     /// Executes an Aleo program function with the provided inputs.
     #[allow(clippy::format_in_format_args)]
     pub fn parse(self) -> Result<String> {
+        todo!("Implement execute command");
         // Setup the endpoint.
         let endpoint = self.endpoint.unwrap_or_else(|| "http://localhost:4180/testnet3/program/execute".to_string());
 
