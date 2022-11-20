@@ -276,6 +276,8 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
         )
     }
 
+    // TODO: Cleanup and optimize.
+
     /// Creates a deploy transaction.
     pub fn create_deploy(
         &self,
@@ -294,5 +296,36 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
 
         // Create a new transaction.
         Transaction::deploy(&self.vm, private_key, program, (candidate.unwrap().clone(), additional_fee), None, rng)
+    }
+
+    /// Creates an execute transaction.
+    pub fn create_execute(
+        &self,
+        private_key: &PrivateKey<N>,
+        program_id: &ProgramID<N>,
+        function_name: &Identifier<N>,
+        inputs: &[Value<N>],
+        additional_fee: u64,
+    ) -> Result<Transaction<N>> {
+        // Fetch an unspent record with sufficient balance.
+        let records = self.find_unspent_records(&ViewKey::try_from(private_key)?)?;
+        let candidate =
+            records.values().find(|record| (**record.gates()).cmp(&U64::new(additional_fee)) != Ordering::Less);
+        ensure!(candidate.is_some(), "The Aleo account has no records with sufficient balance to spend.");
+
+        // Initialize an RNG.
+        let rng = &mut rand::thread_rng();
+
+        // Create a new transaction.
+        Transaction::execute(
+            &self.vm,
+            private_key,
+            program_id.clone(),
+            function_name.clone(),
+            inputs.iter(),
+            Some((candidate.unwrap().clone(), additional_fee)),
+            None,
+            rng,
+        )
     }
 }

@@ -36,7 +36,7 @@ use snarkos_node_ledger::RecordsFilter;
 use std::{str::FromStr, sync::Arc};
 use warp::{http::StatusCode, reject, reply, Filter, Rejection, Reply};
 
-use crate::messages::{DeployRequest, DeployResponse, PourRequest, PourResponse};
+use crate::messages::{DeployRequest, DeployResponse, ExecuteRequest, ExecuteResponse, PourRequest, PourResponse};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
@@ -224,6 +224,14 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
             .and(with(self.consensus.clone()))
             .and_then(Self::program_deploy);
 
+        let program_execute = warp::post()
+            .and(warp::path!("testnet3" / "program" / "execute"))
+            .and(warp::body::content_length_limit(4096))
+            .and(warp::body::json())
+            .and(with(self.ledger.clone()))
+            .and(with(self.consensus.clone()))
+            .and_then(Self::program_execute);
+
         // Return the list of routes.
         latest_height
             .or(latest_hash)
@@ -248,6 +256,7 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
             .or(records_unspent)
             .or(faucet_pour)
             .or(program_deploy)
+            .or(program_execute)
     }
 }
 
@@ -448,6 +457,42 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
 
         // Construct the response.
         let response = DeployResponse::<N>::new(transaction.id());
+
+        // Add the transaction to the memory pool.
+        match consensus {
+            Some(consensus) => match consensus.add_unconfirmed_transaction(transaction) {
+                Ok(_) => Ok(response),
+                Err(_) => Err(reject::custom(RestError::Request(String::from(
+                    "failed to add the transaction to the memory pool",
+                )))),
+            },
+            None => Err(reject::custom(RestError::Request(String::from("no memory pool available")))),
+        }
+    }
+
+    /// Executes a program on the ledger.
+    async fn program_execute(
+        request: ExecuteRequest<N>,
+        ledger: Ledger<N, C>,
+        consensus: Option<SingleNodeConsensus<N, C>>,
+    ) -> Result<impl Reply, Rejection> {
+        // Construct the transaction.
+        let transaction = match Ledger::create_execute(
+            &ledger,
+            request.private_key(),
+            request.program_id(),
+            request.function_name(),
+            request.inputs(),
+            request.additional_fee(),
+        ) {
+            Ok(transaction) => transaction,
+            Err(_) => {
+                return Err(reject::custom(RestError::Request(String::from("failed to construct the transaction"))));
+            }
+        };
+
+        // Construct the response.
+        let response = ExecuteResponse::<N>::new(transaction.id());
 
         // Add the transaction to the memory pool.
         match consensus {
