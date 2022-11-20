@@ -213,10 +213,12 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
 
         // TODO: Faucet total.
 
+        // TODO: content length limit via input
+
         // POST /testnet3/program/deploy
         let program_deploy = warp::post()
             .and(warp::path!("testnet3" / "program" / "deploy"))
-            .and(warp::body::content_length_limit(128))
+            .and(warp::body::content_length_limit(4096))
             .and(warp::body::json())
             .and(with(self.ledger.clone()))
             .and(with(self.consensus.clone()))

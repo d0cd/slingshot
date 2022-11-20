@@ -45,7 +45,6 @@ pub struct Deploy {
 impl Deploy {
     /// Deploys an Aleo program with the specified name.
     pub fn parse(self) -> Result<String> {
-        todo!("Implement deploy command");
         // Setup the endpoint.
         let endpoint = self.endpoint.unwrap_or_else(|| "http://localhost:4180/testnet3/program/deploy".to_string());
 
