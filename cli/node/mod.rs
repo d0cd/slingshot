@@ -19,6 +19,9 @@
 pub mod consensus;
 pub use consensus::*;
 
+pub mod ledger;
+pub use ledger::*;
+
 pub mod pool;
 pub use pool::*;
 
@@ -49,6 +52,7 @@ use snarkvm::prelude::{
 use anyhow::{bail, Result};
 use core::{str::FromStr, time::Duration};
 use parking_lot::RwLock;
+use snarkvm::synthesizer::ConsensusMemory;
 use std::{
     net::SocketAddr,
     sync::{
@@ -66,11 +70,11 @@ pub struct DevelopmentBeacon<N: Network> {
     /// The account of the node.
     account: Account<N>,
     /// The consensus module of the node.
-    consensus: SingleNodeConsensus<N, ConsensusDB<N>>,
+    consensus: SingleNodeConsensus<N, ConsensusMemory<N>>,
     /// The ledger of the node.
-    ledger: Ledger<N, ConsensusDB<N>>,
+    ledger: Ledger<N, ConsensusMemory<N>>,
     /// The REST server of the node.
-    rest: Option<Arc<Rest<N, ConsensusDB<N>>>>,
+    rest: Option<Arc<Rest<N, ConsensusMemory<N>>>>,
     /// The time it to generate a block.
     block_generation_time: Arc<AtomicU64>,
     /// The unspent records.
@@ -123,12 +127,12 @@ impl<N: Network> DevelopmentBeacon<N> {
     }
 
     /// Returns the ledger.
-    pub fn ledger(&self) -> &Ledger<N, ConsensusDB<N>> {
+    pub fn ledger(&self) -> &Ledger<N, ConsensusMemory<N>> {
         &self.ledger
     }
 
     /// Returns the REST server.
-    pub fn rest(&self) -> &Option<Arc<Rest<N, ConsensusDB<N>>>> {
+    pub fn rest(&self) -> &Option<Arc<Rest<N, ConsensusMemory<N>>>> {
         &self.rest
     }
 }
