@@ -16,10 +16,9 @@
 
 #![forbid(unsafe_code)]
 
-use crate::node::SingleNodeConsensus;
+use crate::node::{Ledger, SingleNodeConsensus};
 
 use snarkos_account::Account;
-use snarkos_node_ledger::Ledger;
 use snarkvm::{console::account::Address, prelude::Network, synthesizer::ConsensusStorage};
 
 use anyhow::Result;

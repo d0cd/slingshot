@@ -16,10 +16,9 @@
 
 #![forbid(unsafe_code)]
 
-use crate::node::TransactionPool;
+use crate::node::{Ledger, TransactionPool};
 
 use snarkos_node_consensus::{coinbase_target, proof_target};
-use snarkos_node_ledger::Ledger;
 
 use snarkvm::prelude::*;
 

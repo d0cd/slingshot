@@ -33,7 +33,7 @@ pub use routes::*;
 
 use snarkos_account::Account;
 use snarkos_node_executor::{spawn_task_loop, Executor, NodeType, Status};
-use snarkos_node_ledger::{Ledger, RecordMap};
+use snarkos_node_ledger::RecordMap;
 use snarkos_node_store::ConsensusDB;
 use snarkvm::prelude::{
     Address,

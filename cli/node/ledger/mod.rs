@@ -40,6 +40,7 @@ use snarkvm::prelude::{
     Identifier,
     Network,
     PrivateKey,
+    Program,
     ProgramID,
     Transaction,
     Transactions,
@@ -247,17 +248,17 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
 
     /// Creates a transfer transaction.
     pub fn create_transfer(&self, private_key: &PrivateKey<N>, to: Address<N>, amount: u64) -> Result<Transaction<N>> {
-        // Fetch the unspent records.
+        // Fetch an unspent record with sufficient balance.
         let records = self.find_unspent_records(&ViewKey::try_from(private_key)?)?;
-        let record = records.values().find(|record| (**record.gates()).cmp(&U64::new(amount)) != Ordering::Less);
-        ensure!(!record.is_none(), "The Aleo account has no records with sufficient balance to spend.");
+        let candidate = records.values().find(|record| (**record.gates()).cmp(&U64::new(amount)) != Ordering::Less);
+        ensure!(candidate.is_some(), "The Aleo account has no records with sufficient balance to spend.");
 
         // Initialize an RNG.
         let rng = &mut rand::thread_rng();
 
         // Prepare the inputs.
         let inputs = [
-            Value::Record(record.unwrap().clone()),
+            Value::Record(candidate.unwrap().clone()),
             Value::from_str(&format!("{to}"))?,
             Value::from_str(&format!("{amount}u64"))?,
         ];
@@ -273,5 +274,25 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
             None,
             rng,
         )
+    }
+
+    /// Creates a deploy transaction.
+    pub fn create_deploy(
+        &self,
+        private_key: &PrivateKey<N>,
+        program: &Program<N>,
+        additional_fee: u64,
+    ) -> Result<Transaction<N>> {
+        // Fetch an unspent record with sufficient balance.
+        let records = self.find_unspent_records(&ViewKey::try_from(private_key)?)?;
+        let candidate =
+            records.values().find(|record| (**record.gates()).cmp(&U64::new(additional_fee)) != Ordering::Less);
+        ensure!(candidate.is_some(), "The Aleo account has no records with sufficient balance to spend.");
+
+        // Initialize an RNG.
+        let rng = &mut rand::thread_rng();
+
+        // Create a new transaction.
+        Transaction::deploy(&self.vm, private_key, program, (candidate.unwrap().clone(), additional_fee), None, rng)
     }
 }

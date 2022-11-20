@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo library. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::node::{Rest, SingleNodeConsensus};
+use crate::node::{Ledger, Rest, SingleNodeConsensus};
 
 use snarkos_node_rest::{with, OrReject, RestError};
 
@@ -32,11 +32,11 @@ use snarkvm::prelude::{
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use snarkos_node_ledger::{Ledger, RecordsFilter};
+use snarkos_node_ledger::RecordsFilter;
 use std::{str::FromStr, sync::Arc};
 use warp::{http::StatusCode, reject, reply, Filter, Rejection, Reply};
 
-use crate::messages::{PourRequest, PourResponse};
+use crate::messages::{DeployRequest, DeployResponse, PourRequest, PourResponse};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
@@ -213,6 +213,15 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
 
         // TODO: Faucet total.
 
+        // POST /testnet3/program/deploy
+        let program_deploy = warp::post()
+            .and(warp::path!("testnet3" / "program" / "deploy"))
+            .and(warp::body::content_length_limit(128))
+            .and(warp::body::json())
+            .and(with(self.ledger.clone()))
+            .and(with(self.consensus.clone()))
+            .and_then(Self::program_deploy);
+
         // Return the list of routes.
         latest_height
             .or(latest_hash)
@@ -236,6 +245,7 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
             .or(records_spent)
             .or(records_unspent)
             .or(faucet_pour)
+            .or(program_deploy)
     }
 }
 
@@ -388,7 +398,7 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
     }
 
     /// Pours a specified number of credits from the faucet to the recipient.
-    pub(crate) async fn faucet_pour(
+    async fn faucet_pour(
         request: PourRequest<N>,
         private_key: PrivateKey<N>,
         ledger: Ledger<N, C>,
@@ -404,6 +414,38 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
 
         // Construct the response.
         let response = PourResponse::<N>::new(transaction.id());
+
+        // Add the transaction to the memory pool.
+        match consensus {
+            Some(consensus) => match consensus.add_unconfirmed_transaction(transaction) {
+                Ok(_) => Ok(response),
+                Err(_) => Err(reject::custom(RestError::Request(String::from(
+                    "failed to add the transaction to the memory pool",
+                )))),
+            },
+            None => Err(reject::custom(RestError::Request(String::from("no memory pool available")))),
+        }
+    }
+
+    /// Deploys a program to the ledger.
+    async fn program_deploy(
+        request: DeployRequest<N>,
+        ledger: Ledger<N, C>,
+        consensus: Option<SingleNodeConsensus<N, C>>,
+    ) -> Result<impl Reply, Rejection> {
+        // Construct the transaction.
+        let transaction =
+            match Ledger::create_deploy(&ledger, request.private_key(), request.program(), request.additional_fee()) {
+                Ok(transaction) => transaction,
+                Err(_) => {
+                    return Err(reject::custom(RestError::Request(String::from(
+                        "failed to construct the transaction",
+                    ))));
+                }
+            };
+
+        // Construct the response.
+        let response = DeployResponse::<N>::new(transaction.id());
 
         // Add the transaction to the memory pool.
         match consensus {
