@@ -31,10 +31,14 @@ pub use rest::*;
 pub mod routes;
 pub use routes::*;
 
-use snarkos::account::Account;
-use snarkos::node::ledger::RecordMap;
-use snarkos::node::messages::{NodeType, Status};
-use snarkos::node::NodeInterface;
+use snarkos::{
+    account::Account,
+    node::{
+        ledger::RecordMap,
+        messages::{NodeType, Status},
+        NodeInterface,
+    },
+};
 
 use snarkvm::prelude::{
     Address,
@@ -62,8 +66,7 @@ use std::{
     },
 };
 use time::OffsetDateTime;
-use tokio::task::JoinHandle;
-use tokio::time::timeout;
+use tokio::{task::JoinHandle, time::timeout};
 
 // TODO: Better name
 /// A development beacon is an isolated full node, capable of producing blocks.
@@ -142,8 +145,6 @@ impl<N: Network> DevelopmentBeacon<N> {
     }
 }
 
-
-
 // Note: We cannot use `NodeInterface` directly, since it requires satisfying the trait bound Routing<N>.
 // TODO: Refactor.
 impl<N: Network> DevelopmentBeacon<N> {
@@ -188,7 +189,6 @@ impl<N: Network> DevelopmentBeacon<N> {
         });
     }
 
-    /// Disconnects from peers and shuts down the node.
     /// Shuts down the node.
     async fn shut_down(&self) {
         info!("Shutting down...");
@@ -252,6 +252,24 @@ impl<N: Network> DevelopmentBeacon<N> {
     /// Produces the next block and propagates it to all peers.
     async fn produce_next_block(&self) -> Result<()> {
         let mut beacon_transaction: Option<Transaction<N>> = None;
+
+        let block_store = self.ledger().vm().block_store();
+        println!("Block Store\n");
+        for height in block_store.heights() {
+            println!("    Height: {:?}", height);
+        }
+
+        let transaction_store = self.ledger().vm().transaction_store();
+        println!("Transaction Store\n");
+        for id in transaction_store.transaction_ids() {
+            println!("  Id: {:?}", id);
+        }
+
+        let transition_store = self.ledger().vm().transition_store();
+        println!("Transition Store\n");
+        for id in transition_store.transition_ids() {
+            println!("  Id: {:?}", id);
+        }
 
         // Produce a transaction if the mempool is empty.
         if self.consensus.memory_pool().num_unconfirmed_transactions() == 0 {

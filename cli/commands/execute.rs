@@ -14,10 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo library. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::Network;
-use snarkvm::prelude::{Identifier, Locator, Value};
+use crate::{messages::ExecuteRequest, Network};
 
-use crate::messages::ExecuteRequest;
+use snarkos::account::Account;
+
+use snarkvm::prelude::{Address, Identifier, Locator, Value};
+
 use anyhow::{ensure, Result};
 use clap::Parser;
 use colored::Colorize;
@@ -53,7 +55,6 @@ impl Execute {
     /// Executes an Aleo program function with the provided inputs.
     #[allow(clippy::format_in_format_args)]
     pub fn parse(self) -> Result<String> {
-        todo!("Implement execute command");
         // Setup the endpoint.
         let endpoint = self.endpoint.unwrap_or_else(|| "http://localhost:4180/testnet3/program/execute".to_string());
 
@@ -79,9 +80,13 @@ impl Execute {
         // Retrieve the private key.
         let private_key = manifest.development_private_key();
 
+        println!("Address: {:?}", Account::<Network>::try_from(*private_key)?.address());
+
         // Create the execute request.
         let request =
             ExecuteRequest::new(*private_key, self.program, self.function, self.inputs, self.fee.unwrap_or(0));
+
+        println!("Printing execute request key: {:?}", request);
 
         // TODO: Log outputs
         // Log the outputs.

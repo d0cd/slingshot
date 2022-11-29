@@ -17,9 +17,11 @@
 use snarkvm::prelude::{Identifier, Network, PrivateKey, ProgramID, Value};
 
 use anyhow::Result;
+use clap::Parser;
 use serde::{de, ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use warp::{reply::Response, Reply};
 
+#[derive(Debug)]
 pub struct ExecuteRequest<N: Network> {
     private_key: PrivateKey<N>,
     program_id: ProgramID<N>,

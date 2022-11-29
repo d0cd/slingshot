@@ -54,6 +54,7 @@ use snarkvm::prelude::{
 use anyhow::{anyhow, bail, ensure, Result};
 use indexmap::IndexMap;
 use parking_lot::RwLock;
+use snarkvm::circuit::has_duplicates;
 use std::{cmp::Ordering, str::FromStr, sync::Arc};
 
 #[derive(Clone)]
@@ -264,7 +265,7 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
         ];
 
         // Create a new transaction.
-        Transaction::execute(
+        let transaction = Transaction::execute(
             &self.vm,
             private_key,
             ProgramID::from_str("credits.aleo")?,
@@ -273,10 +274,21 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
             None,
             None,
             rng,
-        )
+        );
+
+        match transaction {
+            Ok(result) => {
+                if let Transaction::Execute(_, execution, _) = &result {
+                    println!("Execution state root: {:}", execution.global_state_root());
+                }
+                Ok(result)
+            }
+            other => other,
+        }
     }
 
     // TODO: Cleanup and optimize.
+    // TODO: If fee is zero, then you don't need to find a record.
 
     /// Creates a deploy transaction.
     pub fn create_deploy(
@@ -307,17 +319,24 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
         inputs: &[Value<N>],
         additional_fee: u64,
     ) -> Result<Transaction<N>> {
+        trace!("Finding unspent records for the Aleo account");
+        println!("Finding unspent records for the Aleo account");
         // Fetch an unspent record with sufficient balance.
         let records = self.find_unspent_records(&ViewKey::try_from(private_key)?)?;
+        trace!("Searching");
+        println!("Searching");
         let candidate =
             records.values().find(|record| (**record.gates()).cmp(&U64::new(additional_fee)) != Ordering::Less);
+
         ensure!(candidate.is_some(), "The Aleo account has no records with sufficient balance to spend.");
+
+        println!("Candidate: {:?}", candidate.unwrap());
 
         // Initialize an RNG.
         let rng = &mut rand::thread_rng();
 
         // Create a new transaction.
-        Transaction::execute(
+        let transaction = Transaction::execute(
             &self.vm,
             private_key,
             program_id.clone(),
@@ -326,6 +345,16 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
             Some((candidate.unwrap().clone(), additional_fee)),
             None,
             rng,
-        )
+        );
+
+        let result = transaction.unwrap();
+
+        println!("transaction is valid: {:?}", self.vm().verify(&result));
+        if let Transaction::Execute(_, execution, _) = &result {
+            println!("execution is valid: {:?}", Transaction::check_execution_size(execution));
+            println!("Execution state root: {:}", execution.global_state_root());
+        }
+
+        Ok(result)
     }
 }
