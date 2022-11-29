@@ -31,10 +31,11 @@ pub use rest::*;
 pub mod routes;
 pub use routes::*;
 
-use snarkos_account::Account;
-use snarkos_node_executor::{spawn_task_loop, Executor, NodeType, Status};
-use snarkos_node_ledger::RecordMap;
-use snarkos_node_store::ConsensusDB;
+use snarkos::account::Account;
+use snarkos::node::ledger::RecordMap;
+use snarkos::node::messages::{NodeType, Status};
+use snarkos::node::NodeInterface;
+
 use snarkvm::prelude::{
     Address,
     Block,
@@ -52,7 +53,7 @@ use snarkvm::prelude::{
 use anyhow::{bail, Result};
 use core::{str::FromStr, time::Duration};
 use parking_lot::RwLock;
-use snarkvm::synthesizer::ConsensusMemory;
+use snarkvm::synthesizer::{ConsensusMemory, ConsensusStorage};
 use std::{
     net::SocketAddr,
     sync::{
@@ -61,6 +62,7 @@ use std::{
     },
 };
 use time::OffsetDateTime;
+use tokio::task::JoinHandle;
 use tokio::time::timeout;
 
 // TODO: Better name
@@ -79,6 +81,8 @@ pub struct DevelopmentBeacon<N: Network> {
     block_generation_time: Arc<AtomicU64>,
     /// The unspent records.
     unspent_records: Arc<RwLock<RecordMap<N>>>,
+    /// The spawned handles.
+    handles: Arc<RwLock<Vec<JoinHandle<()>>>>,
     /// The shutdown signal.
     shutdown: Arc<AtomicBool>,
 }
@@ -92,7 +96,7 @@ impl<N: Network> DevelopmentBeacon<N> {
         dev: Option<u16>,
     ) -> Result<Self> {
         // Initialize the node account.
-        let account = Account::from(private_key)?;
+        let account = Account::try_from(private_key)?;
         // Initialize the ledger.
         let ledger = Ledger::load(genesis, dev)?;
         // Initialize the consensus.
@@ -116,6 +120,7 @@ impl<N: Network> DevelopmentBeacon<N> {
             rest,
             block_generation_time,
             unspent_records: Arc::new(RwLock::new(unspent_records)),
+            handles: Default::default(),
             shutdown: Default::default(),
         };
         // Initialize the block production.
@@ -137,37 +142,18 @@ impl<N: Network> DevelopmentBeacon<N> {
     }
 }
 
-#[async_trait]
-impl<N: Network> Executor for DevelopmentBeacon<N> {
-    /// The node type.
-    const NODE_TYPE: NodeType = NodeType::Beacon;
 
-    /// Disconnects from peers and shuts down the node.
-    async fn shut_down(&self) {
-        info!("Shutting down...");
-        // Update the node status.
-        Self::status().update(Status::ShuttingDown);
 
-        // Shut down the ledger.
-        trace!("Proceeding to shut down the ledger...");
-        self.shutdown.store(true, Ordering::SeqCst);
-
-        // Flush the tasks.
-        Self::resources().shut_down();
-        trace!("Node has shut down.");
-    }
-}
-
-// Note: This is a modification on `NodeInterface`, which requires a router.
+// Note: We cannot use `NodeInterface` directly, since it requires satisfying the trait bound Routing<N>.
 // TODO: Refactor.
 impl<N: Network> DevelopmentBeacon<N> {
     /// Returns the node type.
     fn node_type(&self) -> NodeType {
-        Self::NODE_TYPE
+        NodeType::Beacon
     }
 
     /// Returns the account private key of the node.
-    fn private_key(&self) -> &PrivateKey<N> {
+    pub fn private_key(&self) -> &PrivateKey<N> {
         self.account.private_key()
     }
 
@@ -180,13 +166,54 @@ impl<N: Network> DevelopmentBeacon<N> {
     fn address(&self) -> Address<N> {
         self.account.address()
     }
+
+    /// Returns `true` if the node is in development mode.
+    /// Note that the development beacon is always in development mode.
+    fn is_dev(&self) -> bool {
+        true
+    }
+
+    /// Handles OS signals for the node to intercept and perform a clean shutdown.
+    /// Note: Only Ctrl-C is supported; it should work on both Unix-family systems and Windows.
+    pub fn handle_signals(&self) {
+        let node = self.clone();
+        tokio::task::spawn(async move {
+            match tokio::signal::ctrl_c().await {
+                Ok(()) => {
+                    node.shut_down().await;
+                    std::process::exit(0);
+                }
+                Err(error) => error!("tokio::signal::ctrl_c encountered an error: {}", error),
+            }
+        });
+    }
+
+    /// Disconnects from peers and shuts down the node.
+    /// Shuts down the node.
+    async fn shut_down(&self) {
+        info!("Shutting down...");
+
+        // Shut down block production.
+        trace!("Shutting down block production...");
+        self.shutdown.store(true, Ordering::SeqCst);
+
+        // Abort the tasks.
+        trace!("Shutting down the beacon...");
+        self.handles.read().iter().for_each(|handle| handle.abort());
+
+        // Shut down the ledger.
+        trace!("Shutting down the ledger...");
+        // self.ledger.shut_down().await;
+
+        info!("Node has shut down.");
+    }
 }
 
 impl<N: Network> DevelopmentBeacon<N> {
     /// Initialize a new instance of block production.
     async fn initialize_block_production(&self) {
         let beacon = self.clone();
-        spawn_task_loop!(Self, {
+        self.handles.write().push(tokio::spawn(async move {
             // Expected time per block.
             const ROUND_TIME: u64 = 15; // 15 seconds per block
 
@@ -219,7 +246,7 @@ impl<N: Network> DevelopmentBeacon<N> {
                     break;
                 }
             }
-        });
+        }));
     }
 
     /// Produces the next block and propagates it to all peers.

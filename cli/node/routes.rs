@@ -16,7 +16,8 @@
 
 use crate::node::{Ledger, Rest, SingleNodeConsensus};
 
-use snarkos_node_rest::{with, OrReject, RestError};
+use snarkos::node::ledger::RecordsFilter;
+use snarkos::node::rest::{with, OrReject, RestError};
 
 use snarkvm::prelude::{
     cfg_into_iter,
@@ -32,7 +33,6 @@ use snarkvm::prelude::{
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use snarkos_node_ledger::RecordsFilter;
 use std::{str::FromStr, sync::Arc};
 use warp::{http::StatusCode, reject, reply, Filter, Rejection, Reply};
 

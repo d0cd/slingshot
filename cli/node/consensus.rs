@@ -18,7 +18,7 @@
 
 use crate::node::{Ledger, TransactionPool};
 
-use snarkos_node_consensus::{coinbase_target, proof_target};
+use snarkos::node::consensus::{coinbase_target, proof_target};
 
 use snarkvm::prelude::*;
 

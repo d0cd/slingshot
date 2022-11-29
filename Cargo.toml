@@ -21,14 +21,9 @@ path = "cli/lib.rs"
 name = "slingshot"
 path = "cli/main.rs"
 
-[dependencies.snarkos-node-consensus]
-path = "../snarkOS/node/consensus"
-
-[dependencies.snarkos-node-ledger]
-path = "../snarkOS/node/ledger"
-
-[dependencies.snarkos-node-rest]
-path = "../snarkOS/node/rest"
+[dependencies.snarkos]
+# git = "https://github.com/d0cd/snarkOS"
+path =  "../slingshot-snarkos"
 
 [dependencies.snarkvm]
 version = "0.9.7"
@@ -36,6 +31,9 @@ features = ["aleo-cli", "circuit", "console", "parallel"]
 
 [dependencies.anyhow]
 version = "1.0"
+
+[dependencies.async-trait]
+version = "0.1"
 
 [dependencies.clap]
 version = "3.2"
@@ -47,6 +45,9 @@ version = "2"
 [dependencies.indexmap]
 version = "1.9"
 features = [ "rayon" ]
+
+[dependencies.num_cpus]
+version = "1"
 
 [dependencies.parking_lot]
 version = "0.12"

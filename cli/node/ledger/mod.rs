@@ -26,7 +26,7 @@ pub use get::*;
 pub mod iterators;
 pub use iterators::*;
 
-use snarkos_node_ledger::{Ledger as InternalLedger, RecordMap, RecordsFilter};
+use snarkos::node::ledger::{Ledger as InternalLedger, RecordMap, RecordsFilter};
 
 use snarkvm::prelude::{
     Address,

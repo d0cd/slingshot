@@ -18,7 +18,7 @@
 
 use crate::node::{Ledger, SingleNodeConsensus};
 
-use snarkos_account::Account;
+use snarkos::account::Account;
 use snarkvm::{console::account::Address, prelude::Network, synthesizer::ConsensusStorage};
 
 use anyhow::Result;
