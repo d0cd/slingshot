@@ -38,7 +38,16 @@ use serde::{Deserialize, Serialize};
 use std::{str::FromStr, sync::Arc};
 use warp::{http::StatusCode, reject, reply, Filter, Rejection, Reply};
 
-use crate::messages::{DeployRequest, DeployResponse, ExecuteRequest, ExecuteResponse, PourRequest, PourResponse};
+use crate::messages::{
+    DeployRequest,
+    DeployResponse,
+    ExecuteRequest,
+    ExecuteResponse,
+    PourRequest,
+    PourResponse,
+    RecordViewRequest,
+    RecordViewResponse,
+};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
@@ -387,27 +396,30 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
     }
 
     /// Returns all of the records for the given view key.
-    async fn records_all(view_key: ViewKey<N>, ledger: Ledger<N, C>) -> Result<impl Reply, Rejection> {
+    async fn records_all(request: RecordViewRequest<N>, ledger: Ledger<N, C>) -> Result<impl Reply, Rejection> {
         // Fetch the records using the view key.
-        let records: IndexMap<_, _> = ledger.find_records(&view_key, RecordsFilter::All).or_reject()?.collect();
+        let records: IndexMap<_, _> =
+            ledger.find_records(request.view_key(), RecordsFilter::All).or_reject()?.collect();
         // Return the records.
-        Ok(reply::with_status(reply::json(&records), StatusCode::OK))
+        Ok(reply::with_status(RecordViewResponse::new(records), StatusCode::OK))
     }
 
     /// Returns the spent records for the given view key.
-    async fn records_spent(view_key: ViewKey<N>, ledger: Ledger<N, C>) -> Result<impl Reply, Rejection> {
+    async fn records_spent(request: RecordViewRequest<N>, ledger: Ledger<N, C>) -> Result<impl Reply, Rejection> {
         // Fetch the records using the view key.
-        let records = ledger.find_records(&view_key, RecordsFilter::Spent).or_reject()?.collect::<IndexMap<_, _>>();
+        let records =
+            ledger.find_records(request.view_key(), RecordsFilter::Spent).or_reject()?.collect::<IndexMap<_, _>>();
         // Return the records.
-        Ok(reply::with_status(reply::json(&records), StatusCode::OK))
+        Ok(reply::with_status(RecordViewResponse::new(records), StatusCode::OK))
     }
 
     /// Returns the unspent records for the given view key.
-    async fn records_unspent(view_key: ViewKey<N>, ledger: Ledger<N, C>) -> Result<impl Reply, Rejection> {
+    async fn records_unspent(request: RecordViewRequest<N>, ledger: Ledger<N, C>) -> Result<impl Reply, Rejection> {
         // Fetch the records using the view key.
-        let records = ledger.find_records(&view_key, RecordsFilter::Unspent).or_reject()?.collect::<IndexMap<_, _>>();
+        let records =
+            ledger.find_records(request.view_key(), RecordsFilter::Unspent).or_reject()?.collect::<IndexMap<_, _>>();
         // Return the records.
-        Ok(reply::with_status(reply::json(&records), StatusCode::OK))
+        Ok(reply::with_status(RecordViewResponse::new(records), StatusCode::OK))
     }
 
     /// Pours a specified number of credits from the faucet to the recipient.

@@ -14,9 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo library. If not, see <https://www.gnu.org/licenses/>.
 
-use snarkvm::prelude::{Network, Plaintext, PrivateKey, Program, Record, ViewKey, Visibility};
+use snarkvm::prelude::{Field, Network, Plaintext, PrivateKey, Program, Record, ViewKey, Visibility};
 
 use anyhow::{bail, Result};
+use indexmap::IndexMap;
 use serde::{de, ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use warp::{hyper::body::HttpBody, reply::Response, Reply};
 
@@ -33,6 +34,11 @@ impl<N: Network> RecordViewRequest<N> {
     /// Sends the request to the given endpoint.
     pub fn send(&self, endpoint: &str) -> Result<RecordViewResponse<N>> {
         Ok(ureq::post(endpoint).send_json(self)?.into_json()?)
+    }
+
+    /// Gets the view key associated with the request.
+    pub fn view_key(&self) -> &ViewKey<N> {
+        &self.view_key
     }
 }
 
@@ -57,17 +63,17 @@ impl<'de, N: Network> Deserialize<'de> for RecordViewRequest<N> {
 }
 
 pub struct RecordViewResponse<N: Network> {
-    records: Vec<Record<N, Plaintext<N>>>,
+    records: IndexMap<Field<N>, Record<N, Plaintext<N>>>,
 }
 
 impl<N: Network> RecordViewResponse<N> {
     /// Initializes a new record view response.
-    pub const fn new(records: Vec<Record<N, Plaintext<N>>>) -> Self {
+    pub const fn new(records: IndexMap<Field<N>, Record<N, Plaintext<N>>>) -> Self {
         Self { records }
     }
 
     /// Returns the associated records.
-    pub fn records(&self) -> &[Record<N, Plaintext<N>>] {
+    pub fn records(&self) -> &IndexMap<Field<N>, Record<N, Plaintext<N>>> {
         &self.records
     }
 }

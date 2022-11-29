@@ -46,6 +46,12 @@ pub enum View {
         /// A path to a directory containing a manifest file.
         #[clap(short, long, conflicts_with = "private_key")]
         path: Option<String>,
+        /// Return only the spent records.
+        #[clap(short, long, conflicts_with = "unspent")]
+        spent: bool,
+        /// Return only the unspent records.
+        #[clap(short, long, conflicts_with = "spent")]
+        unspent: bool,
         /// Uses the specified endpoint.
         #[clap(short, long)]
         endpoint: Option<String>,
@@ -57,7 +63,7 @@ impl View {
     pub fn parse(self) -> Result<String> {
         match self {
             // Parse the command and get the private key.
-            Self::Record { key, path, endpoint } => {
+            Self::Record { key, path, spent, unspent, endpoint } => {
                 let private_key = match (key, path) {
                     (Some(_), Some(_)) => unreachable!("Clap prevents conflicting options from being enabled"),
                     (None, None) => panic!("Please specify either a private key or a manifest file"),
@@ -82,10 +88,18 @@ impl View {
                     }
                 };
 
-                // Use the provided endpoint, or default to a local faucet.
+                // Get the record filter.
+                let filter = match (spent, unspent) {
+                    (true, true) => unreachable!("Clap prevents conflicting options from being enabled"),
+                    (true, false) => "spent",
+                    (false, true) => "unspent",
+                    (false, false) => "all",
+                };
+
+                // Use the provided endpoint, or default to a local endpoints.
                 let endpoint = match endpoint {
                     Some(endpoint) => endpoint,
-                    None => "http://localhost:4180/testnet3/records/all".to_string(),
+                    None => format!("http://localhost:4180/testnet3/records/{filter}"),
                 };
 
                 // Construct the request.
@@ -94,48 +108,28 @@ impl View {
 
                 // Send the request and wait for the response.
                 match request.send(&endpoint) {
-                    // TODO: Just send tx id?
                     Ok(response) => {
-                        let mut response =
-                            format!("✅ Found the following records for the account {}.", account.address());
-                        todo!("Print the records");
-                        Ok(response)
+                        let mut message = match (spent, unspent) {
+                            (false, false) => format!(
+                                "✅ Found {} record(s) for the account {}.\n\n",
+                                response.records().len(),
+                                account.address()
+                            ),
+                            _ => format!(
+                                "✅ Found {} {} record(s) for the account {}.\n\n",
+                                response.records().len(),
+                                filter,
+                                account.address()
+                            ),
+                        };
+                        for (commitment, record) in response.records().iter() {
+                            message.push_str(&format!("Commitment: {commitment}\nRecord: {record}\n\n"));
+                        }
+                        Ok(message)
                     }
                     Err(error) => Err(error),
                 }
             }
-        };
-
-        Ok(String::new())
-    }
-
-    /// Returns a runtime for the node.
-    fn runtime() -> Runtime {
-        // TODO: This should be supplied by a config file. Think infrastruct as code tool.
-        // let (num_tokio_worker_threads, max_tokio_blocking_threads, num_rayon_cores_global) = if !Self::node_type().is_beacon() {
-        //     ((num_cpus::get() / 8 * 2).max(1), num_cpus::get(), (num_cpus::get() / 8 * 5).max(1))
-        // } else {
-        //     (num_cpus::get(), 512, num_cpus::get()) // 512 is tokio's current default
-        // };
-        let (num_tokio_worker_threads, max_tokio_blocking_threads, num_rayon_cores_global) =
-            // { ((num_cpus::get() / 2).max(1), num_cpus::get(), (num_cpus::get() / 4 * 3).max(1)) };
-            // { (num_cpus::get().min(8), 512, num_cpus::get().saturating_sub(8).max(1)) };
-            { (1, 512, 4) };
-
-        // Initialize the parallelization parameters.
-        rayon::ThreadPoolBuilder::new()
-            .stack_size(8 * 1024 * 1024)
-            .num_threads(num_rayon_cores_global)
-            .build_global()
-            .unwrap();
-
-        // Initialize the runtime configuration.
-        runtime::Builder::new_multi_thread()
-            .enable_all()
-            .thread_stack_size(8 * 1024 * 1024)
-            .worker_threads(num_tokio_worker_threads)
-            .max_blocking_threads(max_tokio_blocking_threads)
-            .build()
-            .expect("Failed to initialize a runtime for the router")
+        }
     }
 }
