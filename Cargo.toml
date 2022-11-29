@@ -22,8 +22,7 @@ name = "slingshot"
 path = "cli/main.rs"
 
 [dependencies.snarkos]
-# git = "https://github.com/d0cd/snarkOS"
-path =  "../slingshot-snarkos"
+git = "https://github.com/d0cd/snarkOS"
 
 [dependencies.snarkvm]
 version = "0.9.7"
