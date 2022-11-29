@@ -29,6 +29,9 @@ pub use execute::*;
 mod update;
 pub use update::*;
 
+mod view;
+pub use view::*;
+
 use anyhow::Result;
 use clap::Parser;
 
@@ -60,6 +63,8 @@ pub enum Command {
     Execute(Execute),
     #[clap(subcommand)]
     Update(Update),
+    #[clap(subcommand)]
+    View(View),
 }
 
 impl Command {
@@ -71,6 +76,7 @@ impl Command {
             Self::Pour(command) => command.parse(),
             Self::Execute(command) => command.parse(),
             Self::Update(command) => command.parse(),
+            Self::View(command) => command.parse(),
         }
     }
 }
