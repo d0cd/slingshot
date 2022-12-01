@@ -51,26 +51,14 @@ impl<N: Network, C: ConsensusStorage<N>> SingleNodeConsensus<N, C> {
 
     /// Adds the given unconfirmed transaction to the memory pool.
     pub fn add_unconfirmed_transaction(&self, transaction: Transaction<N>) -> Result<()> {
-        trace!("Adding unconfirmed transaction to memory pool: {:?}", transaction.id());
-        println!("Adding unconfirmed transaction to memory pool: {:?}", transaction.id());
         // Ensure the transaction is not already in the memory pool.
         if self.memory_pool.contains_unconfirmed_transaction(transaction.id()) {
-            trace!("Transaction already in memory pool");
-            println!("Transaction already in memory pool");
-
             bail!("Transaction is already in the memory pool.");
         }
         // Check that the transaction is well-formed and unique.
-        trace!("Checking transaction validity");
-        println!("Checking transaction validity");
         self.check_transaction_basic(&transaction)?;
         // Insert the transaction to the memory pool.
-        trace!("Inserting transaction into memory pool");
-        println!("Inserting transaction into memory pool");
         self.memory_pool.add_unconfirmed_transaction(&transaction);
-
-        trace!("Done");
-        println!("Done");
 
         Ok(())
     }
@@ -97,7 +85,7 @@ impl<N: Network, C: ConsensusStorage<N>> SingleNodeConsensus<N, C> {
         let next_round = latest_block.round().saturating_add(1);
 
         // Construct the next coinbase target.
-        let next_coinbase_target = coinbase_target(
+        let next_coinbase_target = coinbase_target::<true>(
             latest_block.last_coinbase_target(),
             latest_block.last_coinbase_timestamp(),
             next_timestamp,
@@ -276,7 +264,7 @@ impl<N: Network, C: ConsensusStorage<N>> SingleNodeConsensus<N, C> {
         }
 
         // Ensure the coinbase target is correct.
-        let expected_coinbase_target = coinbase_target(
+        let expected_coinbase_target = coinbase_target::<true>(
             self.ledger.last_coinbase_target(),
             self.ledger.last_coinbase_timestamp(),
             block.timestamp(),
@@ -374,16 +362,10 @@ impl<N: Network, C: ConsensusStorage<N>> SingleNodeConsensus<N, C> {
     pub fn check_transaction_basic(&self, transaction: &Transaction<N>) -> Result<()> {
         let transaction_id = transaction.id();
 
-        trace!("1");
-        println!("1");
-
         // Ensure the ledger does not already contain the given transaction ID.
         if self.ledger.contains_transaction_id(&transaction_id)? {
             bail!("Transaction '{transaction_id}' already exists in the ledger")
         }
-
-        trace!("2");
-        println!("2");
 
         /* Fee */
 
@@ -393,19 +375,12 @@ impl<N: Network, C: ConsensusStorage<N>> SingleNodeConsensus<N, C> {
             bail!("Transaction '{transaction_id}' has insufficient fee to cover its storage in bytes")
         }
 
-        trace!("3");
-        println!("3");
-        println!("Fee: {}", fee);
-
         /* Proof(s) */
 
         // Ensure the transaction is valid.
         if !self.ledger.vm().verify(transaction) {
             bail!("Transaction '{transaction_id}' is invalid")
         }
-
-        trace!("4");
-        println!("4");
 
         /* Input */
 
@@ -416,9 +391,6 @@ impl<N: Network, C: ConsensusStorage<N>> SingleNodeConsensus<N, C> {
             }
         }
 
-        trace!("5");
-        println!("5");
-
         // Ensure the ledger does not already contain a given serial numbers.
         for serial_number in transaction.serial_numbers() {
             if self.ledger.contains_serial_number(serial_number)? {
@@ -426,18 +398,12 @@ impl<N: Network, C: ConsensusStorage<N>> SingleNodeConsensus<N, C> {
             }
         }
 
-        trace!("6");
-        println!("6");
-
         // Ensure the ledger does not already contain a given tag.
         for tag in transaction.tags() {
             if self.ledger.contains_tag(tag)? {
                 bail!("Tag '{tag}' already exists in the ledger")
             }
         }
-
-        trace!("7");
-        println!("7");
 
         /* Output */
 
@@ -448,9 +414,6 @@ impl<N: Network, C: ConsensusStorage<N>> SingleNodeConsensus<N, C> {
             }
         }
 
-        trace!("8");
-        println!("8");
-
         // Ensure the ledger does not already contain a given commitments.
         for commitment in transaction.commitments() {
             if self.ledger.contains_commitment(commitment)? {
@@ -458,18 +421,12 @@ impl<N: Network, C: ConsensusStorage<N>> SingleNodeConsensus<N, C> {
             }
         }
 
-        trace!("9");
-        println!("9");
-
         // Ensure the ledger does not already contain a given nonces.
         for nonce in transaction.nonces() {
             if self.ledger.contains_nonce(nonce)? {
                 bail!("Nonce '{nonce}' already exists in the ledger")
             }
         }
-
-        trace!("10");
-        println!("10");
 
         /* Program */
 
@@ -481,9 +438,6 @@ impl<N: Network, C: ConsensusStorage<N>> SingleNodeConsensus<N, C> {
             }
         }
 
-        trace!("11");
-        println!("11");
-
         /* Metadata */
 
         // Ensure the ledger does not already contain a given transition public keys.
@@ -493,18 +447,12 @@ impl<N: Network, C: ConsensusStorage<N>> SingleNodeConsensus<N, C> {
             }
         }
 
-        trace!("12");
-        println!("12");
-
         // Ensure the ledger does not already contain a given transition commitment.
         for tcm in transaction.transition_commitments() {
             if self.ledger.contains_tcm(tcm)? {
                 bail!("Transition commitment '{tcm}' already exists in the ledger")
             }
         }
-
-        trace!("13");
-        println!("13");
 
         Ok(())
     }

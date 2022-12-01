@@ -33,11 +33,7 @@ pub use routes::*;
 
 use snarkos::{
     account::Account,
-    node::{
-        ledger::RecordMap,
-        messages::{NodeType, Status},
-        NodeInterface,
-    },
+    node::{ledger::RecordMap, messages::NodeType, NodeInterface},
 };
 
 use snarkvm::prelude::{
@@ -252,25 +248,6 @@ impl<N: Network> DevelopmentBeacon<N> {
     /// Produces the next block and propagates it to all peers.
     async fn produce_next_block(&self) -> Result<()> {
         let mut beacon_transaction: Option<Transaction<N>> = None;
-
-        let block_store = self.ledger().vm().block_store();
-        println!("Block Store\n");
-        for height in block_store.heights() {
-            println!("    Height: {:?}", height);
-        }
-
-        let transaction_store = self.ledger().vm().transaction_store();
-        println!("Transaction Store\n");
-        for id in transaction_store.transaction_ids() {
-            println!("  Id: {:?}", id);
-        }
-
-        let transition_store = self.ledger().vm().transition_store();
-        println!("Transition Store\n");
-        for id in transition_store.transition_ids() {
-            println!("  Id: {:?}", id);
-        }
-
         // Produce a transaction if the mempool is empty.
         if self.consensus.memory_pool().num_unconfirmed_transactions() == 0 {
             // Create a transfer transaction.

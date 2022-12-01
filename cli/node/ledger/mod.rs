@@ -277,12 +277,7 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
         );
 
         match transaction {
-            Ok(result) => {
-                if let Transaction::Execute(_, execution, _) = &result {
-                    println!("Execution state root: {:}", execution.global_state_root());
-                }
-                Ok(result)
-            }
+            Ok(result) => Ok(result),
             other => other,
         }
     }
@@ -319,18 +314,12 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
         inputs: &[Value<N>],
         additional_fee: u64,
     ) -> Result<Transaction<N>> {
-        trace!("Finding unspent records for the Aleo account");
-        println!("Finding unspent records for the Aleo account");
         // Fetch an unspent record with sufficient balance.
         let records = self.find_unspent_records(&ViewKey::try_from(private_key)?)?;
-        trace!("Searching");
-        println!("Searching");
         let candidate =
             records.values().find(|record| (**record.gates()).cmp(&U64::new(additional_fee)) != Ordering::Less);
 
         ensure!(candidate.is_some(), "The Aleo account has no records with sufficient balance to spend.");
-
-        println!("Candidate: {:?}", candidate.unwrap());
 
         // Initialize an RNG.
         let rng = &mut rand::thread_rng();
@@ -348,12 +337,6 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
         );
 
         let result = transaction.unwrap();
-
-        println!("transaction is valid: {:?}", self.vm().verify(&result));
-        if let Transaction::Execute(_, execution, _) = &result {
-            println!("execution is valid: {:?}", Transaction::check_execution_size(execution));
-            println!("Execution state root: {:}", execution.global_state_root());
-        }
 
         Ok(result)
     }

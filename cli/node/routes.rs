@@ -458,8 +458,6 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
         ledger: Ledger<N, C>,
         consensus: Option<SingleNodeConsensus<N, C>>,
     ) -> Result<impl Reply, Rejection> {
-        println!("Received request to deploy program...");
-        println!("Constructing transaction..");
         // Construct the transaction.
         let transaction =
             match Ledger::create_deploy(&ledger, request.private_key(), request.program(), request.additional_fee()) {
@@ -471,20 +469,13 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
                 }
             };
 
-        println!("Constructing response...");
-
         // Construct the response.
         let response = DeployResponse::<N>::new(transaction.id());
-
-        println!("Adding deploy transaction to memory pool...");
 
         // Add the transaction to the memory pool.
         match consensus {
             Some(consensus) => match consensus.add_unconfirmed_transaction(transaction) {
-                Ok(_) => {
-                    println!("Sending response...");
-                    Ok(response)
-                }
+                Ok(_) => Ok(response),
                 Err(_) => Err(reject::custom(RestError::Request(String::from(
                     "failed to add the transaction to the memory pool",
                 )))),
@@ -499,8 +490,6 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
         ledger: Ledger<N, C>,
         consensus: Option<SingleNodeConsensus<N, C>>,
     ) -> Result<impl Reply, Rejection> {
-        println!("Creating transaction");
-        trace!("Creating transaction");
         // Construct the transaction.
         let transaction = match Ledger::create_execute(
             &ledger,
@@ -516,14 +505,8 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
             }
         };
 
-        println!("Creating response");
-        trace!("Creating response");
-
         // Construct the response.
         let response = ExecuteResponse::<N>::new(transaction.id());
-
-        println!("Adding transaction");
-        trace!("Adding transaction");
 
         // Add the transaction to the memory pool.
         match consensus {

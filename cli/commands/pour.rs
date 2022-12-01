@@ -39,10 +39,6 @@ impl Pour {
     /// Pours a specified number of Aleo credits into an address.
     #[allow(clippy::format_in_format_args)]
     pub fn parse(self) -> Result<String> {
-        // TODO: Remove
-        println!("Default state root: {:?}", <Network as snarkvm::prelude::Network>::StateRoot::default());
-        println!("Default state root: {:}", <Network as snarkvm::prelude::Network>::StateRoot::default());
-
         // Use the provided endpoint, or default to a local faucet.
         let endpoint = match self.endpoint {
             Some(endpoint) => endpoint,

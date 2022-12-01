@@ -80,13 +80,9 @@ impl Execute {
         // Retrieve the private key.
         let private_key = manifest.development_private_key();
 
-        println!("Address: {:?}", Account::<Network>::try_from(*private_key)?.address());
-
         // Create the execute request.
         let request =
             ExecuteRequest::new(*private_key, self.program, self.function, self.inputs, self.fee.unwrap_or(0));
-
-        println!("Printing execute request key: {:?}", request);
 
         // TODO: Log outputs
         // Log the outputs.
