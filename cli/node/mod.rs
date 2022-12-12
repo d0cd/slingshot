@@ -246,73 +246,19 @@ impl<N: Network> DevelopmentBeacon<N> {
     }
 
     /// Produces the next block and propagates it to all peers.
+    // TODO: This implementation only produces a block if there is are pending transactions.
+    //   Eventially, we should parameterize this so that users can spin up devnets to their liking.
     async fn produce_next_block(&self) -> Result<()> {
-        let mut beacon_transaction: Option<Transaction<N>> = None;
+        // let mut beacon_transaction: Option<Transaction<N>> = None;
         // Produce a transaction if the mempool is empty.
         if self.consensus.memory_pool().num_unconfirmed_transactions() == 0 {
-            // Create a transfer transaction.
-            let beacon = self.clone();
-            let transaction = match tokio::task::spawn_blocking(move || {
-                // Fetch an unspent record.
-                let (commitment, record) = match beacon.unspent_records.write().shift_remove_index(0) {
-                    Some(record) => record,
-                    None => bail!("The beacon has no unspent records available"),
-                };
-
-                // Initialize an RNG.
-                let rng = &mut rand::thread_rng();
-
-                // Prepare the inputs.
-                let to = beacon.account.address();
-                let amount = 1;
-                let inputs = [
-                    Value::Record(record.clone()),
-                    Value::from_str(&format!("{to}"))?,
-                    Value::from_str(&format!("{amount}u64"))?,
-                ];
-
-                // Create a new transaction.
-                let transaction = Transaction::execute(
-                    beacon.ledger.vm(),
-                    beacon.account.private_key(),
-                    ProgramID::from_str("credits.aleo")?,
-                    Identifier::from_str("transfer")?,
-                    inputs.iter(),
-                    None,
-                    None,
-                    rng,
-                );
-
-                match transaction {
-                    Ok(transaction) => Ok(transaction),
-                    Err(error) => {
-                        // Push the record back into the unspent records.
-                        beacon.unspent_records.write().insert(commitment, record);
-                        bail!("Failed to create a transaction: {error}")
-                    }
-                }
-            })
-            .await
-            {
-                Ok(Ok(transaction)) => transaction,
-                Ok(Err(error)) => bail!("Failed to create a transfer transaction for the next block: {error}"),
-                Err(error) => bail!("Failed to create a transfer transaction for the next block: {error}"),
-            };
-            // Save the beacon transaction.
-            beacon_transaction = Some(transaction.clone());
-
-            // Add the transaction to the memory pool.
-            let beacon = self.clone();
-            match tokio::task::spawn_blocking(move || beacon.consensus.add_unconfirmed_transaction(transaction)).await {
-                Ok(Ok(())) => (),
-                Ok(Err(error)) => bail!("Failed to add the transaction to the memory pool: {error}"),
-                Err(error) => bail!("Failed to add the transaction to the memory pool: {error}"),
-            }
+            // If there are no unconfirmed transactions, then there is no need to do anything.
+            return Ok(());
         }
 
         // Propose the next block.
         let beacon = self.clone();
-        let next_block = match tokio::task::spawn_blocking(move || {
+        match tokio::task::spawn_blocking(move || {
             let next_block = beacon.consensus.propose_next_block(beacon.private_key(), &mut rand::thread_rng())?;
 
             // Ensure the block is a valid next block.
@@ -327,24 +273,6 @@ impl<N: Network> DevelopmentBeacon<N> {
             // Advance to the next block.
             match beacon.consensus.advance_to_next_block(&next_block) {
                 Ok(()) => {
-                    // If the beacon produced a transaction, save its output records.
-                    if let Some(transaction) = beacon_transaction {
-                        // Save the unspent records.
-                        if let Err(error) = transaction.into_transitions().try_for_each(|transition| {
-                            for (commitment, record) in transition.into_records() {
-                                let record = record.decrypt(beacon.account.view_key())?;
-                                if !record.gates().is_zero() {
-                                    beacon.unspent_records.write().insert(commitment, record);
-                                }
-                            }
-                            Ok::<_, anyhow::Error>(())
-                        }) {
-                            warn!("Unable to save the beacon unspent records, recomputing unspent records: {error}");
-                            // Recompute the unspent records.
-                            *beacon.unspent_records.write() =
-                                beacon.ledger.find_unspent_records(beacon.account.view_key())?;
-                        };
-                    }
                     // Log the next block.
                     match serde_json::to_string_pretty(&next_block.header()) {
                         Ok(header) => info!("Block {}: {header}", next_block.height()),
