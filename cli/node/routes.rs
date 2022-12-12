@@ -232,7 +232,7 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
         // POST /testnet3/program/deploy
         let program_deploy = warp::post()
             .and(warp::path!("testnet3" / "program" / "deploy"))
-            .and(warp::body::content_length_limit(4096))
+            .and(warp::body::content_length_limit(max_content_length))
             .and(warp::body::json())
             .and(with(self.ledger.clone()))
             .and(with(self.consensus.clone()))
@@ -240,7 +240,7 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
 
         let program_execute = warp::post()
             .and(warp::path!("testnet3" / "program" / "execute"))
-            .and(warp::body::content_length_limit(4096))
+            .and(warp::body::content_length_limit(max_content_length))
             .and(warp::body::json())
             .and(with(self.ledger.clone()))
             .and(with(self.consensus.clone()))
