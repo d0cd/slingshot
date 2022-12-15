@@ -224,12 +224,15 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
 
         // TODO: Faucet total.
 
-        // TODO: content length limit via input
+        // Determine Content Length based on Input Size supported by the Network.
+        let max_data_size = N::MAX_DATA_SIZE_IN_FIELDS * Field::<N>::SIZE_IN_DATA_BITS as u32;
+        let max_data_inputs = N::MAX_DATA_DEPTH * N::MAX_DATA_ENTRIES * N::MAX_INPUTS;
+        let max_content_length = (max_data_inputs as u32 * max_data_size) as u64;
 
         // POST /testnet3/program/deploy
         let program_deploy = warp::post()
             .and(warp::path!("testnet3" / "program" / "deploy"))
-            .and(warp::body::content_length_limit(4096))
+            .and(warp::body::content_length_limit(max_content_length))
             .and(warp::body::json())
             .and(with(self.ledger.clone()))
             .and(with(self.consensus.clone()))
@@ -237,7 +240,7 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
 
         let program_execute = warp::post()
             .and(warp::path!("testnet3" / "program" / "execute"))
-            .and(warp::body::content_length_limit(4096))
+            .and(warp::body::content_length_limit(max_content_length))
             .and(warp::body::json())
             .and(with(self.ledger.clone()))
             .and(with(self.consensus.clone()))
