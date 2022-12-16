@@ -102,13 +102,19 @@ impl Deploy {
             match request.send(&endpoint) {
                 Ok(_) => println!("✅ Successfully deployed '{}' to the local development node.", program.id()),
                 Err(error) => {
-                    if let Ok(ureq::Error::Status(code, response)) = error.downcast::<ureq::Error>() {
-                        bail!(
-                            "❌ Failed to deploy '{}' to the local development node: {} {:?}",
-                            program.id(),
-                            code,
-                            response.into_string()
-                        );
+                    match error.downcast::<ureq::Error>() {
+                        Ok(ureq::Error::Status(code, response)) => {
+                            bail!(
+                                "❌ Failed to deploy '{}' to the local development node: {} {:?}",
+                                program.id(),
+                                code,
+                                response.into_string()
+                            );
+                        }
+                        Ok(ureq::Error::Transport(error)) => {
+                            bail!("❌ Failed to deploy '{}' to the local development node: {}", program.id(), error);
+                        }
+                        _ => {}
                     }
                     bail!("❌ Failed to deploy '{}' to the local development node", program.id());
                 }
