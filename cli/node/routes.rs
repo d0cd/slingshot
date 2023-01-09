@@ -435,8 +435,10 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
         // Construct the transaction.
         let transaction = match Ledger::create_transfer(&ledger, &private_key, *request.address(), request.amount()) {
             Ok(transaction) => transaction,
-            Err(_) => {
-                return Err(reject::custom(RestError::Request(String::from("failed to construct the transaction"))));
+            Err(error) => {
+                return Err(reject::custom(RestError::Request(format!(
+                    "failed to construct the transaction: {error}",
+                ))));
             }
         };
 
@@ -447,8 +449,8 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
         match consensus {
             Some(consensus) => match consensus.add_unconfirmed_transaction(transaction) {
                 Ok(_) => Ok(response),
-                Err(_) => Err(reject::custom(RestError::Request(String::from(
-                    "failed to add the transaction to the memory pool",
+                Err(error) => Err(reject::custom(RestError::Request(format!(
+                    "failed to add the transaction to the memory pool: {error}",
                 )))),
             },
             None => Err(reject::custom(RestError::Request(String::from("no memory pool available")))),
@@ -465,9 +467,9 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
         let transaction =
             match Ledger::create_deploy(&ledger, request.private_key(), request.program(), request.additional_fee()) {
                 Ok(transaction) => transaction,
-                Err(_) => {
-                    return Err(reject::custom(RestError::Request(String::from(
-                        "failed to construct the transaction",
+                Err(error) => {
+                    return Err(reject::custom(RestError::Request(format!(
+                        "failed to construct the transaction: {error}",
                     ))));
                 }
             };
@@ -479,8 +481,8 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
         match consensus {
             Some(consensus) => match consensus.add_unconfirmed_transaction(transaction) {
                 Ok(_) => Ok(response),
-                Err(_) => Err(reject::custom(RestError::Request(String::from(
-                    "failed to add the transaction to the memory pool",
+                Err(error) => Err(reject::custom(RestError::Request(format!(
+                    "failed to add the transaction to the memory pool: {error}",
                 )))),
             },
             None => Err(reject::custom(RestError::Request(String::from("no memory pool available")))),
@@ -503,8 +505,10 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
             request.additional_fee(),
         ) {
             Ok(transaction) => transaction,
-            Err(_) => {
-                return Err(reject::custom(RestError::Request(String::from("failed to construct the transaction"))));
+            Err(error) => {
+                return Err(reject::custom(RestError::Request(format!(
+                    "failed to construct the transaction: {error}",
+                ))));
             }
         };
 
@@ -515,8 +519,8 @@ impl<N: Network, C: ConsensusStorage<N>> Rest<N, C> {
         match consensus {
             Some(consensus) => match consensus.add_unconfirmed_transaction(transaction) {
                 Ok(_) => Ok(response),
-                Err(_) => Err(reject::custom(RestError::Request(String::from(
-                    "failed to add the transaction to the memory pool",
+                Err(error) => Err(reject::custom(RestError::Request(format!(
+                    "failed to add the transaction to the memory pool: {error}",
                 )))),
             },
             None => Err(reject::custom(RestError::Request(String::from("no memory pool available")))),
