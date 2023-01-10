@@ -27,7 +27,7 @@ pub struct ExecuteRequest<N: Network> {
     program_id: ProgramID<N>,
     function_name: Identifier<N>,
     inputs: Vec<Value<N>>,
-    additional_fee: u64,
+    additional_fee: Option<u64>,
 }
 
 impl<N: Network> ExecuteRequest<N> {
@@ -37,7 +37,7 @@ impl<N: Network> ExecuteRequest<N> {
         program_id: ProgramID<N>,
         function_name: Identifier<N>,
         inputs: Vec<Value<N>>,
-        additional_fee: u64,
+        additional_fee: Option<u64>,
     ) -> Self {
         Self { private_key, program_id, function_name, inputs, additional_fee }
     }
@@ -68,7 +68,7 @@ impl<N: Network> ExecuteRequest<N> {
     }
 
     /// Returns the additional_fee.
-    pub const fn additional_fee(&self) -> u64 {
+    pub const fn additional_fee(&self) -> Option<u64> {
         self.additional_fee
     }
 }

@@ -312,14 +312,20 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
         program_id: &ProgramID<N>,
         function_name: &Identifier<N>,
         inputs: &[Value<N>],
-        additional_fee: u64,
+        additional_fee: Option<u64>,
     ) -> Result<Transaction<N>> {
-        // Fetch an unspent record with sufficient balance.
-        let records = self.find_unspent_records(&ViewKey::try_from(private_key)?)?;
-        let candidate =
-            records.values().find(|record| (**record.gates()).cmp(&U64::new(additional_fee)) != Ordering::Less);
+        let additional_fee = additional_fee
+            .map(|additional_fee| {
+                // Fetch an unspent record with sufficient balance.
+                let records = self.find_unspent_records(&ViewKey::try_from(private_key)?)?;
+                let candidate =
+                    records.values().find(|record| (**record.gates()).cmp(&U64::new(additional_fee)) != Ordering::Less);
 
-        ensure!(candidate.is_some(), "The Aleo account has no records with sufficient balance to spend.");
+                ensure!(candidate.is_some(), "The Aleo account has no records with sufficient balance to spend.");
+
+                Ok((candidate.unwrap().clone(), additional_fee))
+            })
+            .transpose()?;
 
         // Initialize an RNG.
         let rng = &mut rand::thread_rng();
@@ -331,7 +337,7 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
             program_id.clone(),
             function_name.clone(),
             inputs.iter(),
-            Some((candidate.unwrap().clone(), additional_fee)),
+            additional_fee,
             None,
             rng,
         );

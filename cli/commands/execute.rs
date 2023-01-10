@@ -81,8 +81,7 @@ impl Execute {
         let private_key = manifest.development_private_key();
 
         // Create the execute request.
-        let request =
-            ExecuteRequest::new(*private_key, self.program, self.function, self.inputs, self.fee.unwrap_or(0));
+        let request = ExecuteRequest::new(*private_key, self.program, self.function, self.inputs, self.fee);
 
         // TODO: Log outputs
         // Log the outputs.
