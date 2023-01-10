@@ -23,12 +23,12 @@ path = "cli/main.rs"
 
 [dependencies.snarkos]
 git = "https://github.com/d0cd/snarkOS"
-rev = "ff09125"
+rev = "5ad2d9f"
 
 [dependencies.snarkvm]
 # version = "0.9.7"
 git = "https://github.com/AleoHQ/snarkVM"
-rev = "967901e"
+rev = "4b7bb19"
 features = ["aleo-cli", "circuit", "console", "parallel"]
 
 [dependencies.anyhow]
