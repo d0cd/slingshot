@@ -249,7 +249,6 @@ impl<N: Network> DevelopmentBeacon<N> {
     // TODO: This implementation only produces a block if there is are pending transactions.
     //   Eventially, we should parameterize this so that users can spin up devnets to their liking.
     async fn produce_next_block(&self) -> Result<()> {
-        // let mut beacon_transaction: Option<Transaction<N>> = None;
         // Produce a transaction if the mempool is empty.
         if self.consensus.memory_pool().num_unconfirmed_transactions() == 0 {
             // If there are no unconfirmed transactions, then there is no need to do anything.
