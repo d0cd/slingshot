@@ -39,7 +39,7 @@ use clap::Parser;
 #[clap(
     name = "slingshot",
     author = "The Aleo Team <hello@aleo.org>",
-    about = "A lightweight CLI for deploying programs and executing transactions on Aleo.",
+    about = "A lightweight CLI for deploying programs and executing transactions on a development node.",
     setting = clap::AppSettings::ColoredHelp
 )]
 pub struct CLI {

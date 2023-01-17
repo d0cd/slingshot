@@ -19,6 +19,7 @@ use crate::{messages::DeployRequest, Network};
 use snarkvm::{
     file::{AleoFile, Manifest},
     package::Package,
+    prelude::ProgramID,
 };
 
 use anyhow::{bail, ensure, Result};
@@ -31,8 +32,11 @@ use std::{path::PathBuf, str::FromStr};
 /// Deploys an Aleo program.
 #[derive(Debug, Parser)]
 pub struct Deploy {
-    /// The additional fee.
-    #[clap(short, long)]
+    /// The name of the program to deploy.
+    #[clap(parse(try_from_str))]
+    pub program: ProgramID<Network>,
+    /// The deployment fee in gates.
+    #[clap(short, long, help = "The deployment fee in gates, defaults to 0.")]
     pub fee: Option<u64>,
     /// The endpoint to deploy to. Defaults to a local development node.
     #[clap(short, long)]
@@ -73,53 +77,51 @@ impl Deploy {
         // Load the package.
         let package = Package::open(&directory)?;
 
-        // Load the program.
+        // Load the main program.
         let program = package.program();
 
         // Prepare the imports directory.
         let imports_directory = package.imports_directory();
 
-        // Load all of the imported programs (in order of imports).
-        let programs = program
-            .imports()
-            .keys()
-            .map(|program_id| {
-                // Open the Aleo imported program file.
-                let import_program_file = AleoFile::open(&imports_directory, program_id, false)?;
-                // Return the imported program.
-                Ok(import_program_file.program().clone())
-            })
-            .collect::<Result<Vec<_>>>()?;
+        // Find the program that is being deployed.
+        let program = match program.imports().keys().find(|program_id| **program_id == self.program) {
+            Some(program_id) => {
+                let file = AleoFile::open(&imports_directory, program_id, false)?;
+                file.program().clone()
+            }
+            None => match self.program == *program.id() {
+                true => program.clone(),
+                false => bail!("The program '{}' does not exist in {}", self.program, directory.display()),
+            },
+        };
 
-        // Deploy the imported programs (in order of imports), and the main program.
-        for program in programs.iter().chain([program.clone()].iter()) {
-            println!("📦 Deploying '{}' to the local development node...\n", program.id().to_string().bold());
+        let program_id = program.id().clone();
+        println!("📦 Deploying '{}' to the local development node...\n", &program_id.to_string().bold());
 
-            // Create a deployment request.
-            let request = DeployRequest::new(*private_key, program.clone(), self.fee.unwrap_or(0));
+        // Create a deployment request.
+        let request = DeployRequest::new(*private_key, program, self.fee.unwrap_or(0));
 
-            // Send the deployment request to the local development node.
-            match request.send(&endpoint) {
-                Ok(_) => println!("✅ Successfully deployed '{}' to the local development node.", program.id()),
-                Err(error) => {
-                    match error.downcast::<ureq::Error>() {
-                        Ok(ureq::Error::Status(code, response)) => {
-                            bail!(
-                                "❌ Failed to deploy '{}' to the local development node: {} {:?}",
-                                program.id(),
-                                code,
-                                response.into_string()
-                            );
-                        }
-                        Ok(ureq::Error::Transport(error)) => {
-                            bail!("❌ Failed to deploy '{}' to the local development node: {}", program.id(), error);
-                        }
-                        _ => {}
+        // Send the deployment request to the local development node.
+        match request.send(&endpoint) {
+            Ok(_) => println!("✅ Successfully deployed '{}' to the local development node.", program_id),
+            Err(error) => {
+                match error.downcast::<ureq::Error>() {
+                    Ok(ureq::Error::Status(code, response)) => {
+                        bail!(
+                            "❌ Failed to deploy '{}' to the local development node: {} {:?}",
+                            &program_id,
+                            code,
+                            response.into_string()
+                        );
                     }
-                    bail!("❌ Failed to deploy '{}' to the local development node", program.id());
+                    Ok(ureq::Error::Transport(error)) => {
+                        bail!("❌ Failed to deploy '{}' to the local development node: {}", &program_id, error);
+                    }
+                    _ => {}
                 }
-            };
-        }
+                bail!("❌ Failed to deploy '{}' to the local development node", &program_id);
+            }
+        };
 
         Ok("".to_string())
     }
