@@ -1,8 +1,8 @@
 <h1 align="center">slingshot</h1>
 
-<p align="center">
-    <a href="https://discord.gg/5v2ynrw2ds"><img src="https://img.shields.io/discord/700454073459015690?logo=discord"/></a>
-</p>
+#### `slingshot` has been archived. Please use [snarkOS](https://github.com/AleoHQ/snarkOS) and the associated Developer CLI to run a beacon node for local developement.
+
+# Archive
 
 Slingshot is a lightweight CLI for deploying programs and executing transactions on Aleo.
 
